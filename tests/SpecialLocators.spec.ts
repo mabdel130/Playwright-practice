@@ -23,6 +23,6 @@ test("Fill form and submit", async ({ page }) => {
     .getByRole("button", { name: "Add" })
     .click();
 
-    await expect(page.getByRole("link", { name: "Checkout" })).toHaveCount(2);
+  await expect(page.locator('a.nav-link.btn-primary')).toContainText('Checkout ( 2 )');
     
 });
