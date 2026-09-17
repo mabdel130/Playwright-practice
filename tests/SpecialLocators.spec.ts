@@ -22,7 +22,6 @@ test("Fill form and submit", async ({ page }) => {
     filter({ hasText: "Blackberry" })
     .getByRole("button", { name: "Add" })
     .click();
-
   await expect(page.locator('a.nav-link.btn-primary')).toContainText('Checkout ( 2 )');
     
 });
