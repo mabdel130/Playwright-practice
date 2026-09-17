@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { LoginPage } from "./loginPage_saucedemo";
+import { LoginPage } from "../pages/loginPage_saucedemo";
 
 test.use({ launchOptions: { slowMo: 1000 } });
 
