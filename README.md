@@ -1,16 +1,19 @@
-# Swag Labs (SauceDemo) - Playwright Tests
+# Playwright Practice
 
-End-to-end tests for [saucedemo.com](https://www.saucedemo.com/) built with Playwright and TypeScript, using the Page Object Model pattern.
+A personal sandbox for practicing end-to-end testing with [Playwright](https://playwright.dev/) and TypeScript. It contains standalone specs against different public practice sites, used to try out locators, page object structure, and Playwright APIs.
 
 ## Project Structure
 
 ```
 tests/
-├── BasePage_saucedemo.ts        # Base page object with shared URL/navigation logic
-├── loginPage_saucedemo.ts       # Login page object (locators + actions)
-└── LoginPageTest_saucedemo.spec.ts  # Login test spec
-playwright.config.ts             # Playwright configuration
+├── BasePage_saucedemo.ts           # Base page object with shared URL/navigation logic
+├── loginPage_saucedemo.ts          # SauceDemo login page object (locators + actions)
+├── LoginPageTest_saucedemo.spec.ts # SauceDemo login test spec (Page Object Model)
+└── SpecialLocators.spec.ts         # Locator practice against rahulshettyacademy.com/angularpractice
+playwright.config.ts                # Playwright configuration
 ```
+
+Specs are independent of each other — each targets its own practice site and can be run on its own.
 
 ## Prerequisites
 
@@ -58,5 +61,6 @@ npx playwright show-report
 
 ## Notes
 
-- Login test users and credentials are defined in `LoginPage.users()` (`tests/loginPage_saucedemo.ts`), based on the standard SauceDemo test accounts (`standard_user`, `locked_out_user`, `problem_user`, `performance_glitch_user`), all using password `secret_sauce`.
-- Tests run with `slowMo: 800` for easier visual debugging; adjust or remove this in the spec file for faster runs.
+- **SauceDemo tests** (`LoginPageTest_saucedemo.spec.ts`) use the Page Object Model pattern. Test users and credentials are defined in `LoginPage.users()` (`tests/loginPage_saucedemo.ts`), based on the standard SauceDemo test accounts (`standard_user`, `locked_out_user`, `problem_user`, `performance_glitch_user`), all using password `secret_sauce`.
+- **SpecialLocators.spec.ts** practices Playwright locator strategies (`getByRole`, `getByLabel`, `getByPlaceholder`, `.filter()`, chaining) against a form/shop demo site.
+- Some specs use `slowMo` for easier visual debugging; adjust or remove this in the spec file for faster runs.
