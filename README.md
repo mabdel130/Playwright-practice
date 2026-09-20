@@ -72,10 +72,23 @@ npx playwright test "tests/E2E Senario for rahulshettyacademy_client/Test/regist
 npx playwright test "tests/LoaginSenario for sauceDemo/test/LoginPageTest_saucedemo.spec.ts"
 ```
 
-Open the HTML report after a run:
+Run a specific test with trace enabled:
+
+```bash
+npx playwright test registerLoginCheckout.spec.ts --project=chromium --trace=on
+```
+
+View the HTML report and trace after a run:
 
 ```bash
 npm run test:report
+```
+
+Or view the trace directly:
+
+```bash
+npx playwright show-report
+npx playwright show-trace "test-results/[test-name]/trace.zip"
 ```
 
 ## Scenarios
@@ -89,6 +102,23 @@ Note: several inputs on this site have accessibility quirks (labels not correctl
 ### SauceDemo login
 
 Logs in with the standard SauceDemo test account (`standard_user` / `secret_sauce`) and verifies redirection to the inventory page.
+
+## Configuration
+
+### Timeouts
+
+The following timeouts are configured in `playwright.config.ts` to support testing against external sites with variable network latency:
+
+- **`timeout: 60000`** — Overall test timeout (60 seconds)
+- **`navigationTimeout: 60000`** — Navigation timeout for `page.goto()` (60 seconds)
+- **`actionTimeout: 60000`** — Timeout for element interactions like fill, click, etc. (60 seconds)
+- **`waitUntil: 'domcontentloaded'`** — Navigation waits for DOM to be ready instead of all resources to load (faster for external sites)
+
+These settings prevent timeout failures on slow or network-dependent external websites.
+
+### Tracing
+
+Traces are configured to capture on the first retry (`trace: 'on-first-retry'`). To capture traces on every run, use the `--trace=on` flag with the test command. Traces are invaluable for debugging test failures—they capture network requests, DOM snapshots, and a detailed timeline of actions.
 
 ## Notes
 
