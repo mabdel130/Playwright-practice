@@ -53,5 +53,6 @@ export class RegisterPage extends BasePage {
     await this.fillField(this.confirmPasswordInput, user.password);
     await this.clickWhenVisible(this.ageConsentCheckbox);
     await this.clickWhenVisible(this.registerButton);
+    await this.successToast.waitFor({ state: 'visible', timeout: 10000 });
   }
 }
