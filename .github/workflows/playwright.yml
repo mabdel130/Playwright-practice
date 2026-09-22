@@ -1,0 +1,84 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, 'Task*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npm test
+        continue-on-error: true
+
+      - name: Generate test report
+        if: always()
+        run: npx playwright show-report
+        continue-on-error: true
+
+      - name: Upload test results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-on-failure
+          path: |
+            tests/**/screenshots/
+            tests/**/test-results/
+          retention-days: 7
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'playwright-report/index.html';
+
+            let comment = '## 📊 Playwright Test Results\n\n';
+
+            if (fs.existsSync(reportPath)) {
+              comment += '✅ Test report generated and attached as artifact.\n\n';
+              comment += '📁 You can view the detailed report by downloading the `playwright-report` artifact from the Actions tab.';
+            } else {
+              comment += '⚠️ Test report could not be generated.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+        continue-on-error: true

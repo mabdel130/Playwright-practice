@@ -18,7 +18,7 @@ test.describe('rahulshettyacademy.com/client — Register, Login, Add to Cart, C
     await test.step('Register a new user', async () => {
       await registerPage.goto();
       await registerPage.registerUser(user);
-      await expect(registerPage.successToast).toBeVisible();
+      await expect(registerPage.getSuccessToastLocator()).toBeVisible();
     });
 
     await test.step('Log in with the same email and password', async () => {
@@ -36,7 +36,7 @@ test.describe('rahulshettyacademy.com/client — Register, Login, Add to Cart, C
 
     await test.step('Go to cart and proceed to Checkout', async () => {
       await addToCartPage.goToCart();
-      await expect(addToCartPage.cartItemRow(PRODUCT_NAME)).toBeVisible();
+      await expect(addToCartPage.getCartItemRowLocator(PRODUCT_NAME)).toBeVisible();
       await addToCartPage.proceedToCheckout();
     });
 
@@ -44,7 +44,7 @@ test.describe('rahulshettyacademy.com/client — Register, Login, Add to Cart, C
       await checkoutPage.fillPaymentDetails(checkoutData);
       await checkoutPage.fillShippingName(`${user.firstName} ${user.lastName}`);
       await checkoutPage.selectCountry(checkoutData.country);
-      await expect(checkoutPage.countryInput).toHaveValue(checkoutData.country);
+      await expect(checkoutPage.getCountryInputLocator()).toHaveValue(checkoutData.country);
 
       await checkoutPage.takeScreenshot('after-filling-checkout-info');
 
@@ -52,7 +52,7 @@ test.describe('rahulshettyacademy.com/client — Register, Login, Add to Cart, C
     });
 
     await test.step('Verify the order was placed successfully', async () => {
-      await expect(checkoutPage.orderConfirmationMessage).toBeVisible();
+      await expect(checkoutPage.getOrderConfirmationMessageLocator()).toBeVisible();
       await checkoutPage.takeScreenshot('after-order-confirmation');
     });
   });
