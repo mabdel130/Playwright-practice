@@ -3,7 +3,7 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { LoginPage } from '../pages/LoginPage';
 import { AddToCartPage } from '../pages/AddToCartPage';
 import { CheckoutPage } from '../pages/CheckoutPage';
-import { createUser, createCheckoutData, PRODUCT_NAME } from '../data/TestData';
+import { createUser, createCheckoutData, PRODUCT_NAME } from '../utils/TestData';
 
 test.describe('rahulshettyacademy.com/client — Register, Login, Add to Cart, Checkout', () => {
   test('registers, logs in, adds Zara Coat to cart and completes checkout', async ({ page }) => {

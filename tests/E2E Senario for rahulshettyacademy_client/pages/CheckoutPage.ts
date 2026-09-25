@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
-import { CheckoutData } from '../data/TestData';
+import { CheckoutData } from '../utils/TestData';
 
 export class CheckoutPage extends BasePage {
   private readonly creditCardRow: Locator;

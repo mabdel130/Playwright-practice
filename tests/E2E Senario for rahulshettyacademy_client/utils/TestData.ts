@@ -10,8 +10,8 @@ export interface UserData {
 }
 export interface CheckoutData {
   cardNumber: string;
-  expiryMonth: string; 
-  expiryDay: string; 
+  expiryMonth: string;
+  expiryDay: string;
   cvv: string;
   nameOnCard: string;
   country: string;
@@ -45,7 +45,7 @@ export function createUser(): UserData {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
   const gender = faker.helpers.arrayElement<'Male' | 'Female'>(['Male', 'Female']);
-  
+
   const uniqueSuffix = `${Date.now()}${faker.string.alphanumeric(4)}`;
 
   return {
