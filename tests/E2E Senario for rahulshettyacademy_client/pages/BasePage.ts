@@ -10,7 +10,10 @@ export class BasePage {
     this.page = page;
   }
   async gotoRoute(route: string): Promise<void> {
-    await this.page.goto(`${this.clientBaseUrl}${route}`);
+    await this.page.goto(`${this.clientBaseUrl}${route}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    });
   }
   async clickWhenVisible(locator: Locator): Promise<void> {
     await locator.waitFor({ state: 'visible' });
