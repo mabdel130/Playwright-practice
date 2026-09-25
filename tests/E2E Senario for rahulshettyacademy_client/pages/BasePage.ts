@@ -1,13 +1,16 @@
 import { Page, Locator, expect } from '@playwright/test';
 import path from 'path';
+import { SelfHealingLocator } from '../utils/SelfHealingLocator';
 
 export class BasePage {
   readonly page: Page;
   protected readonly clientBaseUrl = 'https://rahulshettyacademy.com/client/#';
   private readonly screenshotsDir = path.join(__dirname, '..', 'screenshots');
+  protected healingLocator: SelfHealingLocator;
 
   constructor(page: Page) {
     this.page = page;
+    this.healingLocator = new SelfHealingLocator(page);
   }
   async gotoRoute(route: string): Promise<void> {
     await this.page.goto(`${this.clientBaseUrl}${route}`, {
@@ -45,5 +48,13 @@ export class BasePage {
     const screenshotPath = path.join(this.screenshotsDir, `${timestamp}_${name}.png`);
     await this.page.screenshot({ path: screenshotPath, fullPage: true });
     return screenshotPath;
+  }
+
+  async clickWithHealing(primary: Locator, backups: Locator[] = []): Promise<void> {
+    await this.healingLocator.clickWithHealing(primary, backups);
+  }
+
+  async fillWithHealing(value: string, primary: Locator, backups: Locator[] = []): Promise<void> {
+    await this.healingLocator.fillWithHealing(value, primary, backups);
   }
 }

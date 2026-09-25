@@ -1,6 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
-import { UserData } from '../data/TestData';
+import { UserData } from '../utils/TestData';
 
 export class RegisterPage extends BasePage {
   constructor(page: Page) {
