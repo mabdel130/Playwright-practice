@@ -44,7 +44,12 @@ jobs:
         run: npx playwright show-report
         continue-on-error: true
 
-      - name: Upload test results as artifact
+      - name: Generate Allure report
+        if: always()
+        run: npm run allure:generate
+        continue-on-error: true
+
+      - name: Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -52,15 +57,29 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      - name: Upload screenshots on failure
-        if: failure()
+      - name: Upload Allure report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-on-failure
-          path: |
-            tests/**/screenshots/
-            tests/**/test-results/
+          name: allure-report
+          path: allure-report/
+          retention-days: 30
+
+      - name: Upload Allure results (for future trend analysis)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results/
           retention-days: 7
+
+      - name: Upload test results (JUnit & JSON)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 30
 
       - name: Comment PR with test results
         if: github.event_name == 'pull_request' && always()
@@ -68,15 +87,24 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const reportPath = 'playwright-report/index.html';
+            const playwrightReportPath = 'playwright-report/index.html';
+            const allureReportPath = 'allure-report/index.html';
 
-            let comment = '## 📊 Playwright Test Results\n\n';
+            let comment = '## 📊 Test Results\n\n';
 
-            if (fs.existsSync(reportPath)) {
-              comment += '✅ Test report generated and attached as artifact.\n\n';
-              comment += '📁 You can view the detailed report by downloading the `playwright-report` artifact from the Actions tab.';
+            if (fs.existsSync(playwrightReportPath)) {
+              comment += '✅ **Playwright HTML Report** — Generated and attached as artifact\n\n';
+            }
+
+            if (fs.existsSync(allureReportPath)) {
+              comment += '✅ **Allure Report** — Generated with screenshots and logs\n\n';
+              comment += '### Available Reports:\n';
+              comment += '- 📋 **playwright-report** — HTML test report with timeline\n';
+              comment += '- 📸 **allure-report** — Rich report with screenshots & logs on failure\n';
+              comment += '- 📊 **test-results** — JUnit XML & JSON results\n\n';
+              comment += 'Download artifacts from the Actions tab to view detailed reports.\n';
             } else {
-              comment += '⚠️ Test report could not be generated.';
+              comment += '⚠️ Reports could not be generated.';
             }
 
             github.rest.issues.createComment({
