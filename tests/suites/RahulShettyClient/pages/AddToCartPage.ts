@@ -16,7 +16,7 @@ export class AddToCartPage extends ClientBasePage {
   }
 
   private selectCartCountLabel(): Locator {
-    return this.selectCartNavButton().locator('label11');
+    return this.selectCartNavButton().locator('label');
   }
 
   private selectProductCard(productName: string): Locator {
