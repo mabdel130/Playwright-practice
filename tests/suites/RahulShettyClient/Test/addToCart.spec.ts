@@ -39,7 +39,7 @@ test.describe(`RahulShettyClient - Add to Cart [${ENV}]`, () => {
     });
   });
 
-  test('TC06: verify invalid product is not available in cart (negative)', async ({ logger }) => {
+  test('TC06: verify invalid product is not available in cart (negative)', async ({ logger, autoScreenshot }) => {
     await test.step('TC06: Search for invalid product using search box', async () => {
       logger.info(`Searching for invalid product: ${cartData.invalidProduct}`);
       await addToCartPage.searchProduct(cartData.invalidProduct);

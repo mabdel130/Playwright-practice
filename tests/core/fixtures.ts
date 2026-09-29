@@ -46,6 +46,12 @@ async function captureTestScreenshot(page: Page, testInfo: TestInfo): Promise<vo
     const screenshotPath = `${screenshotDir}/${fileName}`;
 
     if (!page.isClosed()) {
+      const fs = require('fs');
+      const path = require('path');
+      const dir = path.dirname(screenshotPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       await page.screenshot({ path: screenshotPath, fullPage: false });
 
       await testInfo.attach(testTitle, {
