@@ -1,0 +1,20 @@
+{
+  "user": {
+    "firstName": "JsonDriven",
+    "lastName": "TestUser",
+    "email": "e2e.user.{{timestamp}}@gmail.com",
+    "phone": "9876543210",
+    "occupation": "3: Engineer",
+    "gender": "Male",
+    "password": "E2ETest@Rahul123"
+  },
+  "product": "ZARA COAT 3",
+  "checkout": {
+    "cardNumber": "4542737521358624",
+    "expiryMonth": "12",
+    "expiryDay": "25",
+    "cvv": "123",
+    "nameOnCard": "JsonDriven TestUser",
+    "country": "India"
+  }
+}

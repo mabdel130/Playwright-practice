@@ -1,0 +1,46 @@
+[
+  {
+    "id": "TC01",
+    "title": "valid login with registered credentials",
+    "technique": "Positive - Valid Credentials",
+    "email": "autotest.tc01.1790632625083@gmail.com",
+    "password": "AutoTest@1790632625083",
+    "expected": {
+      "type": "dashboard",
+      "message": "User is redirected to dashboard"
+    }
+  },
+  {
+    "id": "TC02",
+    "title": "invalid login with valid email but wrong password",
+    "technique": "Equivalence Partitioning - Invalid Password",
+    "email": "autotest.tc01.1790632625083@gmail.com",
+    "password": "WrongPassword@123",
+    "expected": {
+      "type": "toast",
+      "message": "Incorrect email or password."
+    }
+  },
+  {
+    "id": "TC03",
+    "title": "invalid login with unregistered email",
+    "technique": "Equivalence Partitioning - Unregistered User",
+    "email": "unregistered.user.12345@gmail.com",
+    "password": "AnyPassword@123",
+    "expected": {
+      "type": "toast",
+      "message": "Incorrect email or password."
+    }
+  },
+  {
+    "id": "TC04",
+    "title": "invalid login with empty email and password",
+    "technique": "Boundary Testing - Empty Fields",
+    "email": "",
+    "password": "",
+    "expected": {
+      "type": "fieldError",
+      "message": "*Email is required"
+    }
+  }
+]

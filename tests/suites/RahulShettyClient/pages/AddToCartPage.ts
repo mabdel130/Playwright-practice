@@ -35,8 +35,20 @@ export class AddToCartPage extends ClientBasePage {
     return this.page.getByText(productName, { exact: true }).first();
   }
 
+  private selectSearchBox(): Locator {
+    return this.page.getByRole('textbox', { name: 'search' }).first();
+  }
+
+  private selectNoProductsMessage(): Locator {
+    return this.page.getByText(/no products found|showing 0 results|no items/i);
+  }
+
   getCartItemRowLocator(productName: string): Locator {
     return this.selectCartItemRow(productName);
+  }
+
+  getProductCardLocator(productName: string): Locator {
+    return this.selectProductCard(productName);
   }
 
   async getCartCount(): Promise<number> {
@@ -66,5 +78,20 @@ export class AddToCartPage extends ClientBasePage {
   async proceedToCheckout(): Promise<void> {
     this.logger.step('Proceeding to checkout');
     await this.clickWhenVisible(this.selectCheckoutButton());
+  }
+
+  async searchProduct(productName: string): Promise<void> {
+    this.logger.step(`Searching for product: ${productName}`);
+    const searchBox = this.selectSearchBox();
+    await searchBox.click();
+    await searchBox.fill(productName);
+    await this.page.keyboard.press('Enter');
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  async verifyNoProductsFound(): Promise<void> {
+    this.logger.step('Verifying no products found message');
+    const noProductsMsg = this.selectNoProductsMessage();
+    await expect(noProductsMsg).toBeVisible({ timeout: 5000 });
   }
 }

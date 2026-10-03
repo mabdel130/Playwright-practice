@@ -1,7 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
 import { Logger } from '../../../core/Logger';
-import { UserData } from '../utils/TestData';
+import { UserData } from '../data/TestData';
 
 export class RegisterPage extends ClientBasePage {
   constructor(page: Page, logger: Logger) {

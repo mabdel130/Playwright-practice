@@ -1,7 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
 import { Logger } from '../../../core/Logger';
-import { CheckoutData } from '../utils/TestData';
+import { CheckoutData } from '../data/TestData';
 
 export class CheckoutPage extends ClientBasePage {
   constructor(page: Page, logger: Logger) {
@@ -38,14 +38,6 @@ export class CheckoutPage extends ClientBasePage {
 
   private selectNameOnCardInput(): Locator {
     return this.selectNameOnCardRow().locator('input');
-  }
-
-  private selectCouponInput(): Locator {
-    return this.page.locator('input[name="coupon"]');
-  }
-
-  private selectApplyCouponButton(): Locator {
-    return this.page.getByRole('button', { name: 'Apply Coupon' });
   }
 
   private selectShippingNameInput(): Locator {
