@@ -1,20 +1,19 @@
-import { test, expect } from '../../../core/fixtures';
-import * as fs from 'fs';
-import * as path from 'path';
-import { LoginPage } from '../pages/LoginPage';
+import { test, expect } from '../fixtures';
+import { loadData } from '../../../core/data/DataLoader';
 import { ENV } from '../../../core/env';
+import { SAUCE_SUITE_DIR } from '../pages/SauceDemoBasePage';
 
-const loginDataPath = path.resolve(__dirname, '../data', ENV, 'login.data.json');
-const loginData = JSON.parse(fs.readFileSync(loginDataPath, 'utf-8'));
+interface SauceLoginData {
+  credentials: { username: string; password: string }[];
+}
 
-test.use({ launchOptions: { slowMo: 1000 } });
+const loginData = loadData<SauceLoginData>(SAUCE_SUITE_DIR, 'login.data.json');
 
-test(`SauceDemo - Login [${ENV}]: verifies that the default user logged successfully with valid data and is redirected to the inventory page`, async ({ page, logger, autoScreenshot }) => {
-  const loginPage = new LoginPage(page, logger);
-  await loginPage.open();
-  const credentials = loginData.credentials[0];
-  await loginPage.login(credentials.username, credentials.password);
+test(`SauceDemo - Login [${ENV}]: verifies that the default user logged successfully with valid data and is redirected to the inventory page`, async ({ page, loginPage, inventoryPage, autoScreenshot }) => {
+  const { username, password } = loginData.credentials[0];
+  await loginPage.goto();
+  await loginPage.login(username, password);
 
-  await expect(page).toHaveURL('https://www.saucedemo.com/inventory.html');
-  await expect(page.locator('.app_logo')).toHaveText('Swag Labs');
+  await expect(page).toHaveURL(inventoryPage.url);
+  await expect(inventoryPage.getAppLogo()).toHaveText('Swag Labs');
 });

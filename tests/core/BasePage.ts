@@ -1,60 +1,28 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { SelfHealingLocator } from './SelfHealingLocator';
-import { Logger } from './Logger';
+import { ILogger } from './Logger';
 
-export class BasePage {
-  protected page: Page;
-  protected healingLocator: SelfHealingLocator;
-  protected logger: Logger;
+export abstract class BasePage {
+  protected readonly healingLocator: SelfHealingLocator;
 
-  constructor(page: Page, logger: Logger) {
-    this.page = page;
-    this.logger = logger;
-    this.healingLocator = new SelfHealingLocator(page);
+  constructor(protected readonly page: Page, protected readonly logger: ILogger) {
+    this.healingLocator = new SelfHealingLocator(logger);
   }
 
-  async goto(url: string): Promise<void> {
+  protected async navigate(url: string): Promise<void> {
     this.logger.step(`Navigating to ${url}`);
-    await this.page.goto(url);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.goto(url, { waitUntil: 'domcontentloaded' });
   }
 
-  async fillField(locator: Locator, value: string): Promise<void> {
-    await locator.waitFor({ state: 'visible' });
+  protected async fillField(locator: Locator, value: string): Promise<void> {
     await locator.fill(value);
   }
 
-  async clickWhenVisible(locator: Locator): Promise<void> {
-    await locator.waitFor({ state: 'visible', timeout: 10000 });
+  protected async clickWhenVisible(locator: Locator): Promise<void> {
     await locator.click();
   }
 
-  async selectOption(locator: Locator, value: string): Promise<void> {
-    await locator.waitFor({ state: 'visible' });
+  protected async selectOption(locator: Locator, value: string): Promise<void> {
     await locator.selectOption(value);
-  }
-
-  async getText(locator: Locator): Promise<string> {
-    return await locator.textContent() || '';
-  }
-
-  async expectText(locator: Locator, text: string | RegExp): Promise<void> {
-    await expect(locator).toHaveText(text);
-  }
-
-  async expectVisible(locator: Locator): Promise<void> {
-    await expect(locator).toBeVisible();
-  }
-
-  async clickWithHealing(primary: Locator, backups: Locator[] = []): Promise<void> {
-    await this.healingLocator.clickWithHealing(primary, backups);
-  }
-
-  async fillWithHealing(value: string, primary: Locator, backups: Locator[] = []): Promise<void> {
-    await this.healingLocator.fillWithHealing(value, primary, backups);
-  }
-
-  protected waitForElement(locator: Locator, timeout: number = 5000): Promise<void> {
-    return locator.waitFor({ state: 'visible', timeout });
   }
 }

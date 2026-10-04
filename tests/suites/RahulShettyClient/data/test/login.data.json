@@ -3,21 +3,22 @@
     "id": "TC01",
     "title": "valid login with registered credentials",
     "technique": "Positive - Valid Credentials",
-    "email": "autotest.tc01.1790632625083@gmail.com",
-    "password": "AutoTest@1790632625083",
+    "userRef": "registeredUser",
     "expected": {
-      "type": "dashboard",
-      "message": "User is redirected to dashboard"
+      "type": "success",
+      "status": 200,
+      "message": "Login Successfully"
     }
   },
   {
     "id": "TC02",
     "title": "invalid login with valid email but wrong password",
     "technique": "Equivalence Partitioning - Invalid Password",
-    "email": "autotest.tc01.1790632625083@gmail.com",
+    "userRef": "registeredUser",
     "password": "WrongPassword@123",
     "expected": {
-      "type": "toast",
+      "type": "error",
+      "status": 400,
       "message": "Incorrect email or password."
     }
   },
@@ -28,7 +29,8 @@
     "email": "unregistered.user.12345@gmail.com",
     "password": "AnyPassword@123",
     "expected": {
-      "type": "toast",
+      "type": "error",
+      "status": 400,
       "message": "Incorrect email or password."
     }
   },
@@ -39,8 +41,9 @@
     "email": "",
     "password": "",
     "expected": {
-      "type": "fieldError",
-      "message": "*Email is required"
+      "type": "error",
+      "status": 400,
+      "message": "Email is required"
     }
   }
 ]

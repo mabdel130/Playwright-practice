@@ -1,16 +1,28 @@
-import { Page } from '@playwright/test';
+import { Locator } from '@playwright/test';
 import { SauceDemoBasePage } from './SauceDemoBasePage';
-import { Logger } from '../../../core/Logger';
+import { Navigable } from '../../../core/contracts';
 
-export class LoginPage extends SauceDemoBasePage {
-  constructor(page: Page, logger: Logger) {
-    super(page, logger);
+export class LoginPage extends SauceDemoBasePage implements Navigable {
+  private selectUsernameInput(): Locator {
+    return this.page.getByPlaceholder('Username');
   }
 
-  public async login(username: string, password: string): Promise<void> {
+  private selectPasswordInput(): Locator {
+    return this.page.getByPlaceholder('Password');
+  }
+
+  private selectLoginButton(): Locator {
+    return this.page.getByRole('button', { name: 'Login' });
+  }
+
+  async goto(): Promise<void> {
+    await this.navigate(this.baseUrl);
+  }
+
+  async login(username: string, password: string): Promise<void> {
     this.logger.step(`Logging in with username: ${username}`);
-    await this.page.getByPlaceholder('Username').fill(username);
-    await this.page.getByPlaceholder('Password').fill(password);
-    await this.page.getByRole('button', { name: 'Login' }).click();
+    await this.fillField(this.selectUsernameInput(), username);
+    await this.fillField(this.selectPasswordInput(), password);
+    await this.clickWhenVisible(this.selectLoginButton());
   }
 }

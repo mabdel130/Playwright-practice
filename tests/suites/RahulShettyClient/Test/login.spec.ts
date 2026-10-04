@@ -1,34 +1,32 @@
-import { test, expect } from '../../../core/fixtures';
-import * as fs from 'fs';
-import * as path from 'path';
-import { LoginPage } from '../pages/LoginPage';
+import { test, expect } from '../fixtures';
+import { loadData } from '../../../core/data/DataLoader';
 import { ENV } from '../../../core/env';
+import { SUITE_DIR } from '../config/ClientConfig';
+import { LoginCase, UsersData, resolveCredentials } from '../data/TestData';
 
-const loginDataPath = path.resolve(__dirname, '../data', ENV, 'login.data.json');
-const loginCases = JSON.parse(fs.readFileSync(loginDataPath, 'utf-8'));
+const users = loadData<UsersData>(SUITE_DIR, 'users.data.json');
+const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
 
-test.describe(`RahulShettyClient - Login [${ENV}]`, () => {
+test.describe(`RahulShettyClient - Login API [${ENV}]`, () => {
   for (const testCase of loginCases) {
-    test(`${testCase.id}: ${testCase.title}`, async ({ page, logger, autoScreenshot }) => {
-      const loginPage = new LoginPage(page, logger);
+    test(`${testCase.id}: ${testCase.title}`, async ({ authApi }) => {
+      const { email, password } = resolveCredentials(users, testCase);
 
-      await test.step(`${testCase.id}: Navigate to login page`, async () => {
-        await loginPage.goto();
+      const response = await test.step(`${testCase.id}: POST /auth/login (${testCase.technique})`, async () => {
+        return authApi.login(email, password);
       });
 
-      await test.step(`${testCase.id}: Enter credentials (${testCase.technique})`, async () => {
-        await loginPage.login(testCase.email, testCase.password);
-      });
+      await test.step(`${testCase.id}: Verify expected response`, async () => {
+        expect(response.status()).toBe(testCase.expected.status);
+        const body = await response.json();
+        expect(body.message).toContain(testCase.expected.message);
 
-      await test.step(`${testCase.id}: Verify expected outcome`, async () => {
-        if (testCase.expected.type === 'dashboard') {
-          await expect(page).toHaveURL(/dashboard/);
-        } else if (testCase.expected.type === 'toast') {
-          const errorToast = page.getByText(testCase.expected.message, { exact: false });
-          await expect(errorToast).toBeVisible({ timeout: 5000 });
-        } else if (testCase.expected.type === 'fieldError') {
-          const fieldError = page.getByText(testCase.expected.message, { exact: false });
-          await expect(fieldError).toBeVisible({ timeout: 5000 });
+        if (testCase.expected.type === 'success') {
+          expect(typeof body.token).toBe('string');
+          expect(body.token.length).toBeGreaterThan(0);
+          expect(body.userId).toBeTruthy();
+        } else {
+          expect(body.token).toBeUndefined();
         }
       });
     });
