@@ -1,13 +1,8 @@
-import { Page, Locator } from '@playwright/test';
+import { Locator } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
-import { Logger } from '../../../core/Logger';
 import { CheckoutData } from '../data/TestData';
 
 export class CheckoutPage extends ClientBasePage {
-  constructor(page: Page, logger: Logger) {
-    super(page, logger);
-  }
-
   private selectCreditCardRow(): Locator {
     return this.page.locator('.form__cc').locator('.row').nth(0);
   }
@@ -88,9 +83,7 @@ export class CheckoutPage extends ClientBasePage {
     await countryInput.click();
     await countryInput.pressSequentially(countryName, { delay: 80 });
 
-    const suggestion = this.selectCountrySuggestions().getByText(countryName, { exact: true }).first();
-    await suggestion.waitFor({ state: 'visible' });
-    await suggestion.click();
+    await this.selectCountrySuggestions().getByText(countryName, { exact: true }).first().click();
   }
 
   async clickPlaceOrder(): Promise<void> {

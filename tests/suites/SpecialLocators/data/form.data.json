@@ -1,0 +1,11 @@
+{
+  "url": "https://rahulshettyacademy.com/angularpractice/",
+  "form": {
+    "name": "Ahmed",
+    "email": "moamed014@gmail.com",
+    "password": "Test@2456",
+    "gender": "Male",
+    "employmentStatus": "Student"
+  },
+  "products": ["iphone X", "Blackberry"]
+}

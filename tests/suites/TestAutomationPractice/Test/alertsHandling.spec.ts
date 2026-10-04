@@ -1,56 +1,33 @@
-import { test, expect } from '../../../core/fixtures';
-import * as fs from 'fs';
-import * as path from 'path';
-import { AlertsPage } from '../pages/AlertsPage';
+import { test, expect } from '../fixtures';
+import { loadData } from '../../../core/data/DataLoader';
 import { ENV } from '../../../core/env';
+import { ALERTS_SUITE_DIR } from '../pages/AlertsPage';
 
-const alertsDataPath = path.resolve(__dirname, '../data', ENV, 'alerts.data.json');
-const alertsData = JSON.parse(fs.readFileSync(alertsDataPath, 'utf-8'));
-
-test.use({ launchOptions: { slowMo: 1100 } });
+const alertsData = loadData<{ promptInputText: string }>(ALERTS_SUITE_DIR, 'alerts.data.json');
 
 test.describe(`Alerts Handling [${ENV}]`, () => {
-  let alertsPage: AlertsPage;
-
-  test.beforeEach(async ({ page, logger }) => {
-    alertsPage = new AlertsPage(page, logger);
+  test.beforeEach(async ({ alertsPage }) => {
     await alertsPage.goto();
-    await page.waitForTimeout(1000);
   });
 
-  test('Test 1: Handle Simple Alert', async ({ page, logger, autoScreenshot }) => {
-    logger.step('Starting simple alert test');
+  test('Test 1: Handle Simple Alert', async ({ page, alertsPage, autoScreenshot }) => {
     const alertMessage = await alertsPage.handleSimpleAlert();
 
-    expect(alertMessage).toBeTruthy();
     expect(alertMessage.toLowerCase()).toContain('alert');
-    expect(page.url()).toContain('testautomationpractice.blogspot.com');
-
-    await page.waitForTimeout(800);
-    logger.step('Simple alert test completed');
+    await expect(page).toHaveURL(/testautomationpractice\.blogspot\.com/);
   });
 
-  test('Test 2: Handle Confirmation Alert', async ({ page, logger, autoScreenshot }) => {
-    logger.step('Starting confirmation alert test');
+  test('Test 2: Handle Confirmation Alert', async ({ page, alertsPage, autoScreenshot }) => {
     const confirmMessage = await alertsPage.handleConfirmAlertAccept();
 
-    expect(confirmMessage).toBeTruthy();
     expect(confirmMessage.toLowerCase()).toContain('button');
-    expect(page.url()).toContain('testautomationpractice.blogspot.com');
-
-    await page.waitForTimeout(800);
-    logger.step('Confirmation alert test completed');
+    await expect(page).toHaveURL(/testautomationpractice\.blogspot\.com/);
   });
 
-  test('Test 3: Handle Prompt Alert with Input', async ({ page, logger, autoScreenshot }) => {
-    logger.step('Starting prompt alert test');
+  test('Test 3: Handle Prompt Alert with Input', async ({ page, alertsPage, autoScreenshot }) => {
     const promptMessage = await alertsPage.handlePromptAlertWithInput(alertsData.promptInputText);
 
-    expect(promptMessage).toBeTruthy();
     expect(promptMessage.toLowerCase()).toContain('name');
-    expect(page.url()).toContain('testautomationpractice.blogspot.com');
-
-    await page.waitForTimeout(800);
-    logger.step('Prompt alert test completed');
+    await expect(page).toHaveURL(/testautomationpractice\.blogspot\.com/);
   });
 });

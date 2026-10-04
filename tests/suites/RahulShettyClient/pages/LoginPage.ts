@@ -1,13 +1,14 @@
 import { Page, Locator } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
-import { Logger } from '../../../core/Logger';
+import { ILogger } from '../../../core/Logger';
+import { Navigable } from '../../../core/contracts';
 
-export class LoginPage extends ClientBasePage {
+export class LoginPage extends ClientBasePage implements Navigable {
   readonly emailInput: Locator;
   readonly passwordInput: Locator;
   readonly loginButton: Locator;
 
-  constructor(page: Page, logger: Logger) {
+  constructor(page: Page, logger: ILogger) {
     super(page, logger);
     this.emailInput = page.locator('#userEmail');
     this.passwordInput = page.locator('#userPassword');
@@ -23,5 +24,16 @@ export class LoginPage extends ClientBasePage {
     await this.fillField(this.emailInput, email);
     await this.fillField(this.passwordInput, password);
     await this.clickWhenVisible(this.loginButton);
+  }
+
+  async loginWithToken(token: string): Promise<void> {
+    this.logger.step('Injecting API token into localStorage');
+    const setToken = (t: string) =>
+      (globalThis as unknown as { localStorage: { setItem(k: string, v: string): void } }).localStorage.setItem('token', t);
+    await this.page.addInitScript(setToken, token);
+    // The app reads the token only at bootstrap, so an already-loaded app must reload.
+    if (this.page.url().startsWith('http')) {
+      await this.page.reload({ waitUntil: 'domcontentloaded' });
+    }
   }
 }

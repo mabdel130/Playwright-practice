@@ -1,12 +1,8 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Locator, expect } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
-import { Logger } from '../../../core/Logger';
+import { Navigable } from '../../../core/contracts';
 
-export class AddToCartPage extends ClientBasePage {
-  constructor(page: Page, logger: Logger) {
-    super(page, logger);
-  }
-
+export class AddToCartPage extends ClientBasePage implements Navigable {
   async goto(): Promise<void> {
     await this.gotoRoute('/dashboard/dash');
   }
@@ -40,7 +36,7 @@ export class AddToCartPage extends ClientBasePage {
   }
 
   private selectNoProductsMessage(): Locator {
-    return this.page.getByText(/no products found|showing 0 results|no items/i);
+    return this.page.getByText(/showing 0 results/i);
   }
 
   getCartItemRowLocator(productName: string): Locator {
@@ -51,23 +47,26 @@ export class AddToCartPage extends ClientBasePage {
     return this.selectProductCard(productName);
   }
 
-  async getCartCount(): Promise<number> {
-    const text = (await this.selectCartCountLabel().textContent()) ?? '';
-    const parsed = parseInt(text.trim(), 10);
+  async expectCartCount(count: number): Promise<void> {
+    await expect(this.selectCartCountLabel()).toHaveText(String(count));
+  }
+
+  // The label is empty (not "0") when the cart is empty.
+  private async readCartCount(): Promise<number> {
+    const parsed = parseInt(((await this.selectCartCountLabel().textContent()) ?? '').trim(), 10);
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
   async addProductToCart(productName: string): Promise<void> {
     this.logger.step(`Adding product to cart: ${productName}`);
-    const card = this.selectProductCard(productName);
-    await card.waitFor({ state: 'visible' });
     await this.selectAddToCartButton(productName).click();
   }
 
   async addProductAndVerifyCartIncreasedByOne(productName: string): Promise<void> {
-    const before = await this.getCartCount();
+    await expect(this.selectProductCard(productName)).toBeVisible();
+    const before = await this.readCartCount();
     await this.addProductToCart(productName);
-    await expect(this.selectCartCountLabel()).toHaveText(String(before + 1));
+    await this.expectCartCount(before + 1);
   }
 
   async goToCart(): Promise<void> {
@@ -83,15 +82,12 @@ export class AddToCartPage extends ClientBasePage {
   async searchProduct(productName: string): Promise<void> {
     this.logger.step(`Searching for product: ${productName}`);
     const searchBox = this.selectSearchBox();
-    await searchBox.click();
     await searchBox.fill(productName);
-    await this.page.keyboard.press('Enter');
-    await this.page.waitForLoadState('networkidle');
+    await searchBox.press('Enter');
   }
 
   async verifyNoProductsFound(): Promise<void> {
     this.logger.step('Verifying no products found message');
-    const noProductsMsg = this.selectNoProductsMessage();
-    await expect(noProductsMsg).toBeVisible({ timeout: 5000 });
+    await expect(this.selectNoProductsMessage()).toBeVisible();
   }
 }

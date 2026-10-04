@@ -1,16 +1,11 @@
-import { Page, Locator } from '@playwright/test';
+import { Locator } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
-import { Logger } from '../../../core/Logger';
+import { Navigable } from '../../../core/contracts';
 import { UserData } from '../data/TestData';
 
-export class RegisterPage extends ClientBasePage {
-  constructor(page: Page, logger: Logger) {
-    super(page, logger);
-  }
-
+export class RegisterPage extends ClientBasePage implements Navigable {
   async goto(): Promise<void> {
     await this.gotoRoute('/auth/register');
-    await this.page.waitForLoadState('domcontentloaded');
   }
 
   private selectFirstNameInput(): Locator {
@@ -83,6 +78,5 @@ export class RegisterPage extends ClientBasePage {
     await this.fillField(this.selectConfirmPasswordInput(), user.password);
     await this.clickWhenVisible(this.selectAgeConsentCheckbox());
     await this.clickWhenVisible(this.selectRegisterButton());
-    await this.selectSuccessToast().waitFor({ state: 'visible', timeout: 10000 });
   }
 }

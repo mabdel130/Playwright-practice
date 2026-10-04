@@ -1,22 +1,15 @@
-import { Page, Locator } from '@playwright/test';
-import * as fs from 'fs';
+import { Locator } from '@playwright/test';
 import * as path from 'path';
 import { BasePage } from '../../../core/BasePage';
-import { Logger } from '../../../core/Logger';
-import { ENV } from '../../../core/env';
+import { loadEnvConfig } from '../../../core/config/EnvConfig';
+import { Navigable } from '../../../core/contracts';
 
-export class AlertsPage extends BasePage {
-  private baseUrl: string;
+export const ALERTS_SUITE_DIR = path.resolve(__dirname, '..');
+const { baseUrl } = loadEnvConfig(ALERTS_SUITE_DIR);
 
-  constructor(page: Page, logger: Logger) {
-    super(page, logger);
-    const envConfigPath = path.resolve(__dirname, '../config', 'env.config.json');
-    const envConfig = JSON.parse(fs.readFileSync(envConfigPath, 'utf-8'));
-    this.baseUrl = envConfig[ENV].baseUrl;
-  }
-
+export class AlertsPage extends BasePage implements Navigable {
   async goto(): Promise<void> {
-    await this.page.goto(this.baseUrl);
+    await this.navigate(baseUrl);
   }
 
   private selectSimpleAlertButton(): Locator {
@@ -35,55 +28,41 @@ export class AlertsPage extends BasePage {
     buttonLocator: Locator,
     backupLocators: Locator[],
     action: 'accept' | 'dismiss' = 'accept',
-    inputText?: string
+    inputText?: string,
   ): Promise<string> {
-    let dialogMessage = '';
+    const dialogPromise = this.page.waitForEvent('dialog');
+    const clickPromise = this.healingLocator.clickWithHealing(buttonLocator, backupLocators);
+    const dialog = await dialogPromise;
+    const message = dialog.message();
+    this.logger.step(`Dialog "${message}" -> ${action}`);
 
-    this.page.once('dialog', async (dialog) => {
-      dialogMessage = dialog.message();
-      await this.page.waitForTimeout(500);
-
-      if (action === 'accept') {
-        if (inputText !== undefined) {
-          await dialog.accept(inputText);
-        } else {
-          await dialog.accept();
-        }
-      } else {
-        await dialog.dismiss();
-      }
-    });
-
-    await this.healingLocator.clickWithHealing(buttonLocator, backupLocators);
-    await this.page.waitForTimeout(500);
-
-    return dialogMessage;
+    if (action === 'accept') {
+      await dialog.accept(inputText);
+    } else {
+      await dialog.dismiss();
+    }
+    await clickPromise;
+    return message;
   }
 
   async handleSimpleAlert(): Promise<string> {
-    const primary = this.selectSimpleAlertButton();
-    const backups = [
+    return this.handleDialog(this.selectSimpleAlertButton(), [
       this.page.locator('#alertBtn'),
       this.page.locator('button[onclick="myFunctionAlert()"]'),
-    ];
-    return await this.handleDialog(primary, backups);
+    ]);
   }
 
   async handleConfirmAlertAccept(): Promise<string> {
-    const primary = this.selectConfirmAlertButton();
-    const backups = [
+    return this.handleDialog(this.selectConfirmAlertButton(), [
       this.page.locator('#confirmBtn'),
       this.page.locator('button[onclick="myFunctionConfirm()"]'),
-    ];
-    return await this.handleDialog(primary, backups, 'accept');
+    ], 'accept');
   }
 
   async handlePromptAlertWithInput(inputText: string): Promise<string> {
-    const primary = this.selectPromptAlertButton();
-    const backups = [
+    return this.handleDialog(this.selectPromptAlertButton(), [
       this.page.locator('#promptBtn'),
       this.page.locator('button[onclick="myFunctionPrompt()"]'),
-    ];
-    return await this.handleDialog(primary, backups, 'accept', inputText);
+    ], 'accept', inputText);
   }
 }

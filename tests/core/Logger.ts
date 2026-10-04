@@ -1,4 +1,11 @@
-export class Logger {
+export interface ILogger {
+  info(msg: string): void;
+  step(msg: string): void;
+  error(msg: string): void;
+  getText(): string;
+}
+
+export class Logger implements ILogger {
   private lines: string[] = [];
 
   info(msg: string): void {
