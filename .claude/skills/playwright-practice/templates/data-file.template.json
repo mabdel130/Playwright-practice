@@ -1,0 +1,14 @@
+[
+  {
+    "id": "TC01",
+    "title": "Happy path (positive)",
+    "email": "user+{{timestamp}}@example.com",
+    "expectedMessage": "Success"
+  },
+  {
+    "id": "TC02",
+    "title": "Empty email (negative)",
+    "email": "",
+    "expectedMessage": "required"
+  }
+]

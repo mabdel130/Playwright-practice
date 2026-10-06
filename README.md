@@ -82,6 +82,28 @@ Other patterns used: **Page Object Model**, **Facade** (`AuthApi.getToken()` hid
 
 ---
 
+## Claude Code Skill
+
+This repo includes a **Playwright best practices skill** at `.claude/skills/playwright-practice/` for use with Claude Code. The skill provides:
+
+- **References:** selector priority, assertion patterns, repo conventions, API login, flaky test debugging
+- **Commands:** run/debug commands, pre-finish checklist with grep patterns
+- **Templates:** copy-paste examples (page object, spec, fixture, data file, API client)
+
+The skill documents that this project already follows best practices:
+- **Selector priority:** ID-based selectors for third-party forms (no semantic HTML), role-based for accessible elements
+- **Web-first assertions:** `await expect(locator).toBeVisible()` throughout
+- **No anti-patterns:** no `waitForTimeout`, `expect(await...)`, or `.only` commits
+
+Use the skill when:
+- Adding a new spec, page object, API client, or test data
+- Debugging a flaky test
+- Reviewing someone else's test code
+
+**Load it:** Claude Code auto-discovers it via `CLAUDE.md` at the repo root.
+
+---
+
 ## Setup
 
 ```bash
@@ -96,7 +118,17 @@ npm test                                          # all tests, all browsers
 npx playwright test tests/suites --project=chromium
 npx playwright test tests/suites/RahulShettyClient --project=chromium
 npx playwright test tests/suites/RahulShettyClient/Test/login.spec.ts
-npm run test:headed                               # see the browser
+npx playwright test --headed                      # see the browser while running
+npx playwright test --headed --project=chromium   # headed mode, single browser
+```
+
+### Headed Mode (Watch Tests Run)
+Run tests with the browser visible for debugging or observation:
+
+```bash
+npm run test:test -- tests/suites/RahulShettyClient --headed
+npm run test:test -- tests/suites/SauceDemo --headed
+npx playwright test --headed --ui                 # headed + interactive inspector
 ```
 
 ### Multi-Environment
@@ -115,10 +147,59 @@ Test titles include the environment (`RahulShettyClient - Login API [dev]`). The
 
 ### Reports
 
+**Playwright HTML Report** (detailed test timeline, screenshots, videos, traces):
 ```bash
-npm run test:report                  # Playwright HTML report
-npm run test:report:allure           # generate + open Allure
+npm run test:report                  # generate + open Playwright HTML
+npx playwright show-report           # open existing report
+```
+
+**Allure Report** (executive summary, trends, attachments):
+```bash
+npm run allure:generate              # generate from allure-results
+npm run allure:open                  # open Allure in browser
+npm run test:report:allure           # run tests + generate + open Allure
+```
+
+**Trace Inspection** (detailed step-by-step execution):
+```bash
 npx playwright show-trace test-results/<test-folder>/trace.zip
+```
+
+**Run in Headed Mode + Generate Reports:**
+```bash
+# Run tests with browser visible, then generate both reports
+npm run test:test -- tests/suites/RahulShettyClient --headed
+npm run test:report
+npm run allure:generate && npm run allure:open
+```
+
+---
+
+## Viewing Test Results
+
+After running tests, view results in different formats:
+
+| Report | Purpose | Open |
+|--------|---------|------|
+| **Playwright HTML** | Timeline, screenshots, videos, traces | `npx playwright show-report` |
+| **Allure** | Executive summary, test matrix, trends | `npm run allure:open` |
+| **JUnit** | CI/CD integration (Jenkins, GitLab, etc.) | `test-results/results.xml` |
+| **JSON** | Programmatic parsing | `test-results/results.json` |
+| **Traces** | Step-by-step execution details | `npx playwright show-trace <trace.zip>` |
+
+**Example workflow:**
+```bash
+# 1. Run tests with headed browser
+npm run test:test -- tests/suites/RahulShettyClient tests/suites/SauceDemo --headed
+
+# 2. View Playwright report (timeline + screenshots)
+npx playwright show-report
+
+# 3. View Allure report (executive summary)
+npm run allure:open
+
+# 4. Inspect specific test trace
+npx playwright show-trace test-results/suites-RahulShettyClient-Test-e2e-test-chromium/trace.zip
 ```
 
 ---
@@ -231,6 +312,8 @@ await this.healingLocator.clickWithHealing(
 ### Waiting strategy
 
 The framework relies on Playwright's auto-waiting and **web-first assertions** (`await expect(locator).toHaveText(...)`). It doesn't use `networkidle`, `waitForTimeout`, `slowMo` or per-call timeouts. Timeouts are set once in `playwright.config.ts`.
+
+See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwright-practice/references/` for detailed guidance.
 
 ---
 
