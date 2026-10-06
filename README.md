@@ -82,6 +82,28 @@ Other patterns used: **Page Object Model**, **Facade** (`AuthApi.getToken()` hid
 
 ---
 
+## Claude Code Skill
+
+This repo includes a **Playwright best practices skill** at `.claude/skills/playwright-practice/` for use with Claude Code. The skill provides:
+
+- **References:** selector priority, assertion patterns, repo conventions, API login, flaky test debugging
+- **Commands:** run/debug commands, pre-finish checklist with grep patterns
+- **Templates:** copy-paste examples (page object, spec, fixture, data file, API client)
+
+The skill documents that this project already follows best practices:
+- **Selector priority:** ID-based selectors for third-party forms (no semantic HTML), role-based for accessible elements
+- **Web-first assertions:** `await expect(locator).toBeVisible()` throughout
+- **No anti-patterns:** no `waitForTimeout`, `expect(await...)`, or `.only` commits
+
+Use the skill when:
+- Adding a new spec, page object, API client, or test data
+- Debugging a flaky test
+- Reviewing someone else's test code
+
+**Load it:** Claude Code auto-discovers it via `CLAUDE.md` at the repo root.
+
+---
+
 ## Setup
 
 ```bash
@@ -231,6 +253,8 @@ await this.healingLocator.clickWithHealing(
 ### Waiting strategy
 
 The framework relies on Playwright's auto-waiting and **web-first assertions** (`await expect(locator).toHaveText(...)`). It doesn't use `networkidle`, `waitForTimeout`, `slowMo` or per-call timeouts. Timeouts are set once in `playwright.config.ts`.
+
+See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwright-practice/references/` for detailed guidance.
 
 ---
 
