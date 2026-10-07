@@ -4,8 +4,10 @@ End-to-end and API test automation built with **Playwright 1.63** and **TypeScri
 
 - 🧱 **SOLID architecture** (ISTQB CTAL-TAE ch.3): layered core, page objects and API clients injected through fixtures
 - 🔐 **API login**: tests get a session token from the REST API instead of filling in the login form
+- 🧪 **Isolated sessions**: UI tests register a fresh user through the API, so every test starts with an empty cart and no old orders
+- ♻️ **Reusable flows**: login precondition (`loginAsValidUser`) and cart → checkout → order (`checkoutFlow`) are written once and shared by specs
 - 🗂️ **JSON data-driven, multi-environment**: `dev` / `test` / `staging` / `prod` data and URLs per suite
-- 📸 **Failure capture**: a screenshot and the per-test log are attached to the reports when a test fails
+- 📸 **Screenshot for every test**: attached to the HTML and Allure reports; the per-test log is also attached when a test fails
 - 🎯 **Allure, HTML, JUnit and JSON reports**
 - ⚡ **Fast CI**: Chromium by default, cached browsers, parallel workers
 
@@ -29,21 +31,23 @@ tests/
 │   └── globalSetup.ts                 # Wipes old results/reports before each run
 │
 ├── suites/
-│   ├── RahulShettyClient/             # Register → API login → cart → checkout
-│   │   ├── api/AuthApi.ts             # POST /auth/login, getToken()
+│   ├── RahulShettyClient/             # Register → API login → cart → checkout → orders
+│   │   ├── api/AuthApi.ts             # POST /auth/register, POST /auth/login, getToken()
 │   │   ├── config/
 │   │   │   ├── env.config.json        # baseUrl + apiBaseUrl per env
 │   │   │   └── ClientConfig.ts        # Typed config + SUITE_DIR
 │   │   ├── data/
 │   │   │   ├── TestData.ts            # Typed models + resolveCredentials()
 │   │   │   └── {dev,test,staging,prod}/
-│   │   │       ├── users.data.json    # Shared credentials (single source)
-│   │   │       ├── login.data.json    # 4 API login cases
-│   │   │       ├── cart.data.json     # Products + userRef
-│   │   │       └── e2e.data.json      # New user, product, checkout data
-│   │   ├── pages/                     # ClientBasePage, LoginPage, RegisterPage, AddToCartPage, CheckoutPage
-│   │   ├── fixtures.ts                # Injects page objects + AuthApi
-│   │   └── Test/                      # login.spec.ts, addToCart.spec.ts, e2eValidFlow.spec.ts
+│   │   │       ├── users.data.json    # Registered account for the login API tests
+│   │   │       ├── login.data.json    # 4 API login cases (1 valid, 3 invalid)
+│   │   │       ├── cart.data.json     # Valid / invalid product
+│   │   │       ├── e2e.data.json      # New user, product, checkout data
+│   │   │       └── order.data.json    # Products (name + product ID) and checkout data
+│   │   ├── pages/                     # ClientBasePage, LoginPage, RegisterPage, AddToCartPage, CheckoutPage, OrdersPage
+│   │   ├── flows/CheckoutFlow.ts      # Reusable cart → checkout → place order steps
+│   │   ├── fixtures.ts                # Injects pages, AuthApi, checkoutFlow, loginAsValidUser
+│   │   └── Test/                      # login, addToCart, e2eValidFlow, orderFlow specs
 │   │
 │   ├── SauceDemo/                     # Login → inventory
 │   │   ├── config/ data/ pages/       # SauceDemoBasePage, LoginPage, InventoryPage
@@ -84,7 +88,7 @@ Other patterns used: **Page Object Model**, **Facade** (`AuthApi.getToken()` hid
 
 ## Claude Code Skill
 
-This repo includes a **Playwright best practices skill** at `.claude/skills/playwright-practice/` for use with Claude Code. The skill provides:
+A **Playwright best practices skill** lives at `.claude/skills/playwright-practice/` for use with Claude Code. The `.claude/` folder is **local only** (listed in `.gitignore`), so it isn't part of a fresh clone. The skill provides:
 
 - **References:** selector priority, assertion patterns, repo conventions, API login, flaky test debugging
 - **Commands:** run/debug commands, pre-finish checklist with grep patterns
@@ -100,7 +104,7 @@ Use the skill when:
 - Debugging a flaky test
 - Reviewing someone else's test code
 
-**Load it:** Claude Code auto-discovers it via `CLAUDE.md` at the repo root.
+**Load it:** Claude Code auto-discovers it via a local `CLAUDE.md` at the repo root. Both `CLAUDE.md` and `.claude/` are gitignored.
 
 ---
 
@@ -126,10 +130,14 @@ npx playwright test --headed --project=chromium   # headed mode, single browser
 Run tests with the browser visible for debugging or observation:
 
 ```bash
+npm run test:watch                                # RahulShettyClient, headed, slowMo 800, 1 worker, Chromium
 npm run test:test -- tests/suites/RahulShettyClient --headed
 npm run test:test -- tests/suites/SauceDemo --headed
-npx playwright test --headed --ui                 # headed + interactive inspector
+npx playwright test --ui                          # interactive UI mode
 ```
+
+- The flag is `--headed` with no space. `npx playwright test -- headed` treats `headed` as a test filter, runs nothing and writes no reports.
+- `SLOWMO=<ms>` slows every action down (read by `playwright.config.ts`, default `0`). Raise the test timeout too, e.g. `--timeout=300000`.
 
 ### Multi-Environment
 
@@ -141,7 +149,7 @@ $env:TEST_ENV='staging'; npx playwright test tests/suites     # PowerShell
 TEST_ENV=staging npx playwright test tests/suites             # bash
 ```
 
-Test titles include the environment (`RahulShettyClient - Login API [dev]`). The RahulShettyClient E2E test is **skipped on prod** because it creates users and orders.
+Test titles include the environment (`RahulShettyClient - Login API [dev]`). RahulShettyClient UI tests (E2E, cart, order flow) are **skipped on prod** where they create users and orders.
 
 **Adding an environment:** add an entry to each suite's `env.config.json`, create a `data/<env>/` folder with that suite's JSON files, and optionally add a `test:<env>` npm script. Also add the name to `validEnvs` in `tests/core/env.ts`.
 
@@ -155,10 +163,14 @@ npx playwright show-report           # open existing report
 
 **Allure Report** (executive summary, trends, attachments):
 ```bash
-npm run allure:generate              # generate from allure-results
+npm run allure:generate              # build allure-report/index.html (single file) from allure-results
 npm run allure:open                  # open Allure in browser
-npm run test:report:allure           # run tests + generate + open Allure
+npm run test:report:allure           # generate + open Allure
+npm run report:all                   # generate Allure, then open the Playwright HTML report
 ```
+
+- The Allure HTML **does not update by itself**: run `npm run allure:generate` after every test run. It is built as a single file, so `allure-report/index.html` also opens directly from disk.
+- Don't pass `--reporter=...` on the command line: it replaces all reporters in the config, so neither the HTML nor the Allure report is written.
 
 **Trace Inspection** (detailed step-by-step execution):
 ```bash
@@ -216,22 +228,36 @@ npx playwright show-trace test-results/suites-RahulShettyClient-Test-e2e-test-ch
 | TC02 | Valid email, wrong password → 400 | Equivalence partitioning | API | login + users |
 | TC03 | Unregistered email → 400 | Equivalence partitioning | API | login |
 | TC04 | Empty email and password → 400 `Email is required` | Boundary | API | login |
-| TC05 | Add valid product, cart count +1, product in cart | Positive | UI (API login) | cart + users |
-| TC06 | Search invalid product → "Showing 0 results", not in cart | Negative | UI (API login) | cart + users |
+| TC05 | Add valid product, cart count +1, product in cart | Positive | UI (isolated user) | cart |
+| TC06 | Search invalid product → "Showing 0 results", not in cart | Negative | UI (isolated user) | cart |
+| TC11 | Product IDs (via "View") match JSON → add 2 products → checkout → API response product IDs match JSON → Orders tab lists exactly these orders → "View" each order | End-to-end | UI + API (isolated user) | order |
 | E2E | Register → API login → add to cart → checkout → order confirmed | End-to-end | UI (API login) | e2e |
 
-**How the API login works**
+The login API tests render their request and response in the browser, so their screenshot shows the evidence (the token is masked).
 
-1. `AuthApi.getToken(email, password)` calls `POST /auth/login` and returns the JWT (or fails with the HTTP status and body).
-2. `LoginPage.loginWithToken(token)` writes `localStorage.token` through `page.addInitScript`, so the token is in place before the app boots. If the app is already open (as in the E2E test, after registering), it reloads, because the app reads the token only at startup.
-3. The test opens the dashboard already logged in. The login form is never used.
+**Login precondition: `loginAsValidUser`**
+
+Written once in `fixtures.ts` and called from `beforeEach` in any spec that needs a logged-in user:
+
+1. Builds a unique user and registers it with `AuthApi.register()` (`POST /auth/register`).
+2. `AuthApi.getToken()` calls `POST /auth/login` and returns the JWT (or fails with the HTTP status and body).
+3. `LoginPage.loginWithToken(token)` writes `localStorage.token` through `page.addInitScript`, so the token is in place before the app boots. If the app is already open, it reloads, because the app reads the token only at startup.
+4. Opens the dashboard and checks the URL. The login form is never used.
+
+Because every test gets its own user, tests can run in parallel without sharing a cart or seeing each other's orders.
 
 ```typescript
-test.beforeEach(async ({ authApi, loginPage, addToCartPage }) => {
-  const { email, password } = resolveCredentials(users, cartData);
-  await loginPage.loginWithToken(await authApi.getToken(email, password));
-  await addToCartPage.goto();
+test.beforeEach(async ({ loginAsValidUser }) => {
+  await loginAsValidUser();
 });
+```
+
+**Reusable checkout: `checkoutFlow`**
+
+`flows/CheckoutFlow.ts` holds the steps shared by the E2E and order-flow specs: `addProductsToCart`, `goToCartAndProceedToCheckout`, `fillCheckoutDetails`, `placeOrder` (returns the order and product IDs from the `create-order` API response), and `purchase`, which runs them all:
+
+```typescript
+const { orderIds, productIds } = await checkoutFlow.purchase(productNames, checkout, shippingName);
 ```
 
 ### 2. SauceDemo — Login
@@ -257,7 +283,7 @@ const users      = loadData<UsersData>(SUITE_DIR, 'users.data.json');
 const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
 ```
 
-**One source for credentials.** `users.data.json` holds the registered account. Other files point to it with `userRef`, and can override single fields:
+**One source for credentials.** `users.data.json` holds the registered account used by the login API tests. Login cases point to it with `userRef`, and can override single fields:
 
 ```json
 // users.data.json
@@ -267,8 +293,10 @@ const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
 { "id": "TC02", "userRef": "registeredUser", "password": "WrongPassword@123",
   "expected": { "type": "error", "status": 400, "message": "Incorrect email or password." } }
 
-// cart.data.json
-{ "userRef": "registeredUser", "validProduct": "ZARA COAT 3", "invalidProduct": "NON EXISTENT PRODUCT" }
+// order.data.json (product IDs are checked against the app)
+{ "products": [{ "name": "ZARA COAT 3", "id": "6960eac0c941646b7a8b3e68" },
+               { "name": "ADIDAS ORIGINAL", "id": "6960eae1c941646b7a8b3ed3" }],
+  "checkout": { "cardNumber": "…", "country": "India" } }
 ```
 
 `resolveCredentials(users, source)` merges the referenced user with any overrides. A password change is now a one-line edit in each environment's `users.data.json`.
@@ -296,9 +324,12 @@ export const test = base.extend<ClientFixtures>({
 
 Specs import `test`/`expect` from **their suite's** `fixtures.ts`.
 
-### Failure capture and logging
+### Screenshots and logging
 
-On failure, a full-page screenshot and the test's buffered log (`[ISO time] STEP: …`) are attached to the HTML and Allure reports. Specs that request `autoScreenshot` also save a screenshot to `tests/suites/<Suite>/screenshots/` (gitignored, wiped before each run).
+- **Every test** gets a full-page screenshot through `screenshot: 'on'` in `playwright.config.ts`. It shows at the top level of the test in both the HTML and Allure reports.
+- The auto fixture `autoScreenshot` also saves one per test to `tests/suites/<Suite>/screenshots/` (gitignored, wiped before each run). No opt-in needed.
+- Before the screenshot, an `afterEach` hook waits up to 5 s for network calls to settle, so it doesn't capture a "Loading..." page. It never fails a test.
+- On failure, a failure screenshot and the test's buffered log (`[ISO time] STEP: …`) are attached as well.
 
 ### Self-healing locators
 
@@ -311,7 +342,7 @@ await this.healingLocator.clickWithHealing(
 
 ### Waiting strategy
 
-The framework relies on Playwright's auto-waiting and **web-first assertions** (`await expect(locator).toHaveText(...)`). It doesn't use `networkidle`, `waitForTimeout`, `slowMo` or per-call timeouts. Timeouts are set once in `playwright.config.ts`.
+The framework relies on Playwright's auto-waiting and **web-first assertions** (`await expect(locator).toHaveText(...)`). Specs don't use `networkidle`, `waitForTimeout` or per-call timeouts. Timeouts are set once in `playwright.config.ts`. The only `networkidle` wait is the best-effort one before the end-of-test screenshot, and `slowMo` is opt-in via `SLOWMO` for watching runs.
 
 See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwright-practice/references/` for detailed guidance.
 
@@ -325,6 +356,8 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 | `expect.timeout` | 10 s (web-first assertions) |
 | `navigationTimeout` / `actionTimeout` | 60 s |
 | `trace` | `retain-on-failure` |
+| `screenshot` | `on`, full page (every test) |
+| `launchOptions.slowMo` | `SLOWMO` env var, default `0` |
 | `retries` | 1 on CI, 0 locally |
 | `workers` | 50% of CPUs on CI, default locally |
 | Reporters | html, json (`test-results/results.json`), junit, list, allure-playwright |
@@ -377,4 +410,6 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 - **Timeouts**: open the trace (`npx playwright show-trace …`). Prefer fixing the wait condition over raising timeouts.
 - **WebKit crashes/out-of-memory locally**: run with fewer workers (`--workers=2`).
 - **API login fails**: the error shows the HTTP status and body. Check `users.data.json` for the environment.
-- **Allure report missing**: `npm run allure:generate`, then `npm run allure:open`.
+- **Allure report missing or old**: `npm run allure:generate`, then `npm run allure:open`.
+- **Reports not updated after a run**: check the command for `-- headed` (should be `--headed`) or a `--reporter` override.
+- **TC11 product ID mismatch**: the site re-created its products. Update the IDs in `order.data.json` (all envs).

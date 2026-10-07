@@ -23,6 +23,10 @@ export class AddToCartPage extends ClientBasePage implements Navigable {
     return this.selectProductCard(productName).getByRole('button', { name: 'Add To Cart' });
   }
 
+  private selectViewProductButton(productName: string): Locator {
+    return this.selectProductCard(productName).getByRole('button', { name: 'View' });
+  }
+
   private selectCheckoutButton(): Locator {
     return this.page.getByRole('button', { name: 'Checkout' });
   }
@@ -51,7 +55,6 @@ export class AddToCartPage extends ClientBasePage implements Navigable {
     await expect(this.selectCartCountLabel()).toHaveText(String(count));
   }
 
-  // The label is empty (not "0") when the cart is empty.
   private async readCartCount(): Promise<number> {
     const parsed = parseInt(((await this.selectCartCountLabel().textContent()) ?? '').trim(), 10);
     return Number.isNaN(parsed) ? 0 : parsed;
@@ -67,6 +70,15 @@ export class AddToCartPage extends ClientBasePage implements Navigable {
     const before = await this.readCartCount();
     await this.addProductToCart(productName);
     await this.expectCartCount(before + 1);
+  }
+
+  async openProductDetailsAndGetId(productName: string): Promise<string> {
+    this.logger.step(`Opening product details: ${productName}`);
+    await this.clickWhenVisible(this.selectViewProductButton(productName));
+    await this.page.waitForURL(/\/product-details\/\w+$/);
+    const productId = this.page.url().split('/product-details/')[1];
+    this.logger.info(`Product "${productName}" ID: ${productId}`);
+    return productId;
   }
 
   async goToCart(): Promise<void> {

@@ -6,13 +6,21 @@ export const test = base.extend<{ logger: Logger; autoScreenshot: void }>({
     const logger = new Logger();
     await use(logger);
   },
-  autoScreenshot: async ({ page }, use, testInfo) => {
-    await use();
-    await captureTestScreenshot(page, testInfo);
-  },
+  // auto: every test saves an end-of-test screenshot to tests/suites/<Suite>/screenshots.
+  // Report attachment comes from `screenshot: 'on'` in playwright.config.ts (top level, not nested in teardown).
+  autoScreenshot: [
+    async ({ page }, use, testInfo) => {
+      await use();
+      await captureTestScreenshot(page, testInfo);
+    },
+    { auto: true },
+  ],
 });
 
 test.afterEach(async ({ page, logger }, testInfo) => {
+  // Let in-flight XHRs settle so the end-of-test screenshot isn't a "Loading..." page. Best-effort, never fails the test.
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
+
   if (testInfo.status !== testInfo.expectedStatus) {
     const screenshotBuffer = await page.screenshot({ fullPage: true });
     await testInfo.attach('failure-screenshot', {
@@ -42,8 +50,8 @@ async function captureTestScreenshot(page: Page, testInfo: TestInfo): Promise<vo
     const suiteMatch = filePath.match(/tests[\\\/]suites[\\\/]([^\\\/]+)/);
     const suiteName = suiteMatch ? suiteMatch[1] : 'general';
 
-    const screenshotDir = `tests/suites/${suiteName}/screenshots`;
-    const screenshotPath = `${screenshotDir}/${fileName}`;
+    const screenshotDir = require('path').join(testInfo.config.rootDir, 'suites', suiteName, 'screenshots');
+    const screenshotPath = require('path').join(screenshotDir, fileName);
 
     if (!page.isClosed()) {
       const fs = require('fs');
@@ -53,11 +61,6 @@ async function captureTestScreenshot(page: Page, testInfo: TestInfo): Promise<vo
         fs.mkdirSync(dir, { recursive: true });
       }
       await page.screenshot({ path: screenshotPath, fullPage: false });
-
-      await testInfo.attach(testTitle, {
-        path: screenshotPath,
-        contentType: 'image/png',
-      });
 
       console.log(`📸 Screenshot saved: ${screenshotPath}`);
     }
