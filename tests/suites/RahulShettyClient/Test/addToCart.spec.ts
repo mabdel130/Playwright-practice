@@ -2,17 +2,13 @@ import { test, expect } from '../fixtures';
 import { loadData } from '../../../core/data/DataLoader';
 import { ENV } from '../../../core/env';
 import { SUITE_DIR } from '../config/ClientConfig';
-import { CartData, UsersData, resolveCredentials } from '../data/TestData';
+import { CartData } from '../data/TestData';
 
-const users = loadData<UsersData>(SUITE_DIR, 'users.data.json');
 const cartData = loadData<CartData>(SUITE_DIR, 'cart.data.json');
 
 test.describe(`RahulShettyClient - Add to Cart [${ENV}]`, () => {
-  test.beforeEach(async ({ page, authApi, loginPage, addToCartPage }) => {
-    const { email, password } = resolveCredentials(users, cartData);
-    await loginPage.loginWithToken(await authApi.getToken(email, password));
-    await addToCartPage.goto();
-    await expect(page).not.toHaveURL(/auth\/login/);
+  test.beforeEach(async ({ loginAsValidUser }) => {
+    await loginAsValidUser();
   });
 
   test('TC05: add valid product to cart (positive)', async ({ addToCartPage, autoScreenshot }) => {

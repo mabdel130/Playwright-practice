@@ -1,0 +1,20 @@
+{
+  "products": [
+    {
+      "name": "ZARA COAT 3",
+      "id": "6960eac0c941646b7a8b3e68"
+    },
+    {
+      "name": "ADIDAS ORIGINAL",
+      "id": "6960eae1c941646b7a8b3ed3"
+    }
+  ],
+  "checkout": {
+    "cardNumber": "4542737521358624",
+    "expiryMonth": "12",
+    "expiryDay": "25",
+    "cvv": "123",
+    "nameOnCard": "JsonDriven TestUser",
+    "country": "Egypt"
+  }
+}
