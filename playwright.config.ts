@@ -26,7 +26,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    trace: 'retain-on-failure',
+    // DEBUG_API=1 keeps a trace for every test: its Network tab shows each request/response (incl. API login) with screenshots.
+    trace: process.env.DEBUG_API === '1' ? 'on' : 'retain-on-failure',
     navigationTimeout: 60000,
     actionTimeout: 60000,
   },

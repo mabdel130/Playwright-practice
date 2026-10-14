@@ -165,6 +165,7 @@ DEBUG_API=1 npx playwright test ...                                           # 
 
 - `DEBUG_API=1` prints each API response (status + body) and the page `localStorage` after every `gotoRoute`, and attaches both to the test report (`api-response POST /auth/login`, `localStorage /dashboard/dash`). It is off by default because the output contains the login token.
 - `DEVTOOLS=1` opens Chrome DevTools on every tab (Chromium only), so the Network tab records the browser traffic from the first request.
+- `DEBUG_API=1` also keeps a **trace for every test**. Open it with `npx playwright show-trace test-results/<test-folder>/trace.zip`: its **Network** tab lists every request (including the API login) with headers and response body, next to a screenshot of the page at each step. Playwright cannot screenshot Chrome DevTools itself, so this is the way to get a Network view you can capture.
 - API login uses Playwright's `request` fixture, not the browser, so it does **not** appear in the Network tab. Read it from the console or the report attachment. The token only reaches the browser when it is injected into `localStorage` (`LoginPage.loginWithToken`).
 
 ### Headed Mode (Watch Tests Run)
