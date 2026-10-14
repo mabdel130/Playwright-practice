@@ -8,6 +8,8 @@ End-to-end and API test automation built with **Playwright 1.63** and **TypeScri
 - 📸 **Failure capture**: a screenshot and the per-test log are attached to the reports when a test fails
 - 🎯 **Allure, HTML, JUnit and JSON reports**
 - ⚡ **Fast CI**: Chromium by default, cached browsers, parallel workers
+- ✅ **Verified framework** (ISTQB CTAL-TAE ch.7): typecheck, ESLint, anti-pattern scan, unit tests and a pre-flight setup check
+- 📈 **Continuous improvement** (ISTQB CTAL-TAE ch.8): metrics, flaky and Allure history, self-healing visibility, Dependabot
 
 ---
 
@@ -21,12 +23,14 @@ tests/
 │   ├── SelfHealingLocator.ts          # Primary + backup locator strategies
 │   ├── contracts.ts                   # Navigable interface (pages that have a URL)
 │   ├── api/BaseApi.ts                 # Abstract API client (request, baseUrl, logger, post)
-│   ├── config/EnvConfig.ts            # loadEnvConfig(suiteDir) → config/env.config.json[ENV]
+│   ├── config/EnvConfig.ts            # loadEnvConfig(suiteDir), createSuiteConfig(__dirname)
 │   ├── data/DataLoader.ts             # loadData(suiteDir, file) → data/<ENV>/<file> + {{timestamp}}
-│   ├── env.ts                         # TEST_ENV selector (default: test)
-│   ├── fixtures.ts                    # Base test: logger, autoScreenshot, failure capture
-│   ├── TestDataFactory.ts             # faker re-export
-│   └── globalSetup.ts                 # Wipes old results/reports before each run
+│   ├── env.ts                         # parseEnv() + ENV (TEST_ENV, default: test)
+│   ├── fileName.ts                    # sanitizeFileName() for screenshot names
+│   ├── fixtures.ts                    # Base test: logger, auto autoScreenshot, failure capture
+│   ├── pageFixture.ts                 # pageFixture(PageClass) → one-line suite fixtures
+│   ├── preflight.ts                   # Static setup checks (env entry, data files per env, JSON)
+│   └── globalSetup.ts                 # Pre-flight, then wipes old results (keeps trend history)
 │
 ├── suites/
 │   ├── RahulShettyClient/             # Register → API login → cart → checkout
@@ -56,12 +60,21 @@ tests/
 │   │   └── Test/alertsHandling.spec.ts
 │   │
 │   └── SpecialLocators/               # Locator strategies (Angular practice form + shop)
-│       ├── data/form.data.json
+│       ├── data/{dev,test,staging,prod}/form.data.json
 │       ├── pages/AngularPracticePage.ts
 │       ├── fixtures.ts
 │       └── SpecialLocators.spec.ts
 │
-└── Typescript_Fundamentals/           # TypeScript language practice
+├── unit/                              # Browser-less tests of tests/core (project: unit)
+│   └── env, selfHealingLocator, dataAndConfig, preflight specs
+│
+└── Typescript_Fundamentals/           # TypeScript language practice (excluded from typecheck/lint)
+
+scripts/
+├── check-antipatterns.js              # Fails on waitForTimeout, .only, expect(await …), page.$
+└── metrics.js                         # results.json → metrics.json / metrics.md / flaky-history.json
+eslint.config.mjs                      # typescript-eslint + eslint-plugin-playwright
+.github/dependabot.yml                 # Weekly npm + GitHub Actions updates
 ```
 
 **Layers (gTAA):** specs (test definition) → suite fixtures (wiring) → page objects / API clients (adaptation) → core (framework services).
@@ -158,7 +171,7 @@ npx playwright show-report           # open existing report
 ```bash
 npm run allure:generate              # generate from allure-results
 npm run allure:open                  # open Allure in browser
-npm run test:report:allure           # run tests + generate + open Allure
+npm run test:report:allure           # generate + open Allure (run tests first)
 ```
 
 **Trace Inspection** (detailed step-by-step execution):
@@ -310,6 +323,8 @@ await this.healingLocator.clickWithHealing(
 );
 ```
 
+When a backup locator is used, the test is annotated `healed` (primary + backup), so it is counted in `metrics.json` even if the test passes. Treat it as a defect in the primary locator.
+
 ### Waiting strategy
 
 The framework relies on Playwright's auto-waiting and **web-first assertions** (`await expect(locator).toHaveText(...)`). It doesn't use `networkidle`, `waitForTimeout`, `slowMo` or per-call timeouts. Timeouts are set once in `playwright.config.ts`.
@@ -329,7 +344,7 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 | `retries` | 1 on CI, 0 locally |
 | `workers` | 50% of CPUs on CI, default locally |
 | Reporters | html, json (`test-results/results.json`), junit, list, allure-playwright |
-| Projects | chromium, firefox, webkit |
+| Projects | `unit` (no browser, `tests/unit`), chromium, firefox, webkit |
 
 ---
 
@@ -386,13 +401,15 @@ The framework verifies itself before it verifies the product. `npm run verify` r
 1. Create `tests/suites/MySuite/{config,data/<env>,pages,Test}` and `config/env.config.json`.
 2. Pages extend `BasePage` (or a suite base), take `(page: Page, logger: ILogger)`, and implement `Navigable` if they have a URL:
    ```typescript
+   export const { suiteDir: SUITE_DIR, config: { baseUrl } } = createSuiteConfig(__dirname); // in pages/ or config/
    export class MyPage extends BasePage implements Navigable {
-     async goto() { await this.navigate(loadEnvConfig(SUITE_DIR).baseUrl); }
+     async goto() { await this.navigate(baseUrl); }
    }
    ```
 3. API clients extend `BaseApi`.
-4. Add `fixtures.ts` that extends `tests/core/fixtures` and injects your pages/APIs.
-5. Specs import from `../fixtures`, load data with `loadData`, and assert with web-first `expect`.
+4. Add `fixtures.ts` that extends `tests/core/fixtures` and injects your pages with `pageFixture(MyPage)` (APIs: `async ({ request, logger }, use) => use(new MyApi(request, logger))`).
+5. Specs import from `../fixtures`, load data with `loadData`, and assert with web-first `expect`. Do not request `autoScreenshot`; it is automatic.
+6. Put the same data files in all four `data/<env>/` folders; pre-flight fails the run if one is missing. Finish with `npm run verify`.
 
 ---
 
@@ -401,4 +418,7 @@ The framework verifies itself before it verifies the product. `npm run verify` r
 - **Timeouts**: open the trace (`npx playwright show-trace …`). Prefer fixing the wait condition over raising timeouts.
 - **WebKit crashes/out-of-memory locally**: run with fewer workers (`--workers=2`).
 - **API login fails**: the error shows the HTTP status and body. Check `users.data.json` for the environment.
+- **Pre-flight failed at start**: the message names the suite and the missing env entry or data file. Fix it, or check `TEST_ENV`.
+- **Pre-flight URL warnings offline**: expected; set `PREFLIGHT_STRICT=1` only when you want them to fail the run.
+- **`npm run verify` fails on lint**: `npx eslint tests scripts --fix` handles the auto-fixable ones; the rest name the rule to read.
 - **Allure report missing**: `npm run allure:generate`, then `npm run allure:open`.
