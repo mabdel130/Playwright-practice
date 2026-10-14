@@ -1,6 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import { test as base, expect } from '../../core/fixtures';
+import { loadData } from '../../core/data/DataLoader';
 import { AngularPracticePage, PracticeFormData } from './pages/AngularPracticePage';
 
 export interface SpecialLocatorsData {
@@ -9,9 +9,7 @@ export interface SpecialLocatorsData {
   products: string[];
 }
 
-export const practiceData: SpecialLocatorsData = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, 'data', 'form.data.json'), 'utf-8'),
-);
+export const practiceData = loadData<SpecialLocatorsData>(path.resolve(__dirname), 'form.data.json');
 
 export const test = base.extend<{ practicePage: AngularPracticePage }>({
   practicePage: async ({ page, logger }, use) => use(new AngularPracticePage(page, logger, practiceData.url)),

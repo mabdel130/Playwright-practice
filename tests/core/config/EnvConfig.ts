@@ -15,3 +15,14 @@ export function loadEnvConfig<T extends BaseEnvConfig = BaseEnvConfig>(suiteDir:
   }
   return config as T;
 }
+
+export interface SuiteConfig<T extends BaseEnvConfig> {
+  suiteDir: string;
+  config: T;
+}
+
+/** One call per suite: resolves the suite folder and loads its env entry. */
+export function createSuiteConfig<T extends BaseEnvConfig = BaseEnvConfig>(pagesOrConfigDir: string): SuiteConfig<T> {
+  const suiteDir = path.resolve(pagesOrConfigDir, '..');
+  return { suiteDir, config: loadEnvConfig<T>(suiteDir) };
+}

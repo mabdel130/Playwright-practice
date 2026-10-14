@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AddToCartPage } from './pages/AddToCartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
+import { pageFixture } from '../../core/pageFixture';
 import { AuthApi } from './api/AuthApi';
 
 type ClientFixtures = {
@@ -14,10 +15,10 @@ type ClientFixtures = {
 };
 
 export const test = base.extend<ClientFixtures>({
-  loginPage: async ({ page, logger }, use) => use(new LoginPage(page, logger)),
-  registerPage: async ({ page, logger }, use) => use(new RegisterPage(page, logger)),
-  addToCartPage: async ({ page, logger }, use) => use(new AddToCartPage(page, logger)),
-  checkoutPage: async ({ page, logger }, use) => use(new CheckoutPage(page, logger)),
+  loginPage: pageFixture(LoginPage),
+  registerPage: pageFixture(RegisterPage),
+  addToCartPage: pageFixture(AddToCartPage),
+  checkoutPage: pageFixture(CheckoutPage),
   authApi: async ({ request, logger }, use) => use(new AuthApi(request, logger)),
 });
 

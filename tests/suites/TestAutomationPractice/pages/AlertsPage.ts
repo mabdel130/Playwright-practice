@@ -1,11 +1,9 @@
 import { Locator } from '@playwright/test';
-import * as path from 'path';
 import { BasePage } from '../../../core/BasePage';
-import { loadEnvConfig } from '../../../core/config/EnvConfig';
+import { createSuiteConfig } from '../../../core/config/EnvConfig';
 import { Navigable } from '../../../core/contracts';
 
-export const ALERTS_SUITE_DIR = path.resolve(__dirname, '..');
-const { baseUrl } = loadEnvConfig(ALERTS_SUITE_DIR);
+export const { suiteDir: ALERTS_SUITE_DIR, config: { baseUrl } } = createSuiteConfig(__dirname);
 
 export class AlertsPage extends BasePage implements Navigable {
   async goto(): Promise<void> {
