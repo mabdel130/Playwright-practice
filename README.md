@@ -360,24 +360,24 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 
 ## Verifying the TAS (ISTQB CTAL-TAE ch.7)
 
-The framework verifies itself before it verifies the product.  runs:
+The framework verifies itself before it verifies the product. `npm run verify` runs:
 
 | Check | What it catches |
 |---|---|
-|  | Type errors; , ,  are on |
-|  | ESLint +  (hard waits, , non-web-first assertions, element handles, invalid titles) |
-|  |  - the review-checklist greps, as a failing check |
-|  | Browser-less tests of  in  (self-healing, data/env loading, pre-flight, env parsing) |
+| `npm run typecheck` | Type errors; `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns` are on |
+| `npm run lint` | ESLint + `eslint-plugin-playwright` (hard waits, `.only`, non-web-first assertions, element handles, invalid titles) |
+| `npm run check:antipatterns` | `scripts/check-antipatterns.js` - the review-checklist greps, as a failing check |
+| `npm run test:unit` | Browser-less tests of `tests/core` in `tests/unit/` (self-healing, data/env loading, pre-flight, env parsing) |
 
-**Pre-flight (, run from )**: fails fast if  is invalid, a suite has no entry for the env, a  folder lacks files that  has, or a data file is invalid JSON. Base URLs are probed with a HEAD request and only warn, unless .
+**Pre-flight (`tests/core/preflight.ts`, run from `globalSetup`)**: fails fast if `TEST_ENV` is invalid, a suite has no entry for the env, a `data/<env>/` folder lacks files that `data/test/` has, or a data file is invalid JSON. Base URLs are probed with a HEAD request and only warn, unless `PREFLIGHT_STRICT=1`.
 
 ## Continuous improvement (ISTQB CTAL-TAE ch.8)
 
-- **Metrics**:  (after a run) reads  and writes  / : pass rate, flaky count, duration, slowest tests, healed locators.
-- **Self-healing visibility**: when a backup locator is used, the test gets a  annotation (primary + backup), so healing is counted even in passing tests. Fix the primary locator when you see one.
-- **Trends**:  keeps  and ; CI restores and saves them between runs.
-- **Flaky policy**: a test that appears twice in  is fixed or quarantined ( with a ticket) within the sprint. Never add retries to hide it.
-- **Maintenance cadence**: Dependabot opens weekly PRs for npm and GitHub Actions; the weekly scheduled run shows drift. Shared setup lives in  (, , ) - extend those instead of copying code between suites.
+- **Metrics**: `npm run metrics` (after a run) reads `test-results/results.json` and writes `metrics.json` / `metrics.md`: pass rate, flaky count, duration, slowest tests, healed locators.
+- **Self-healing visibility**: when a backup locator is used, the test gets a `healed` annotation (primary + backup), so healing is counted even in passing tests. Fix the primary locator when you see one.
+- **Trends**: `globalSetup` keeps `allure-results/history` and `test-results/flaky-history.json`; CI restores and saves them between runs.
+- **Flaky policy**: a test that appears twice in `flaky-history.json` is fixed or quarantined (`test.fixme` with a ticket) within the sprint. Never add retries to hide it.
+- **Maintenance cadence**: Dependabot opens weekly PRs for npm and GitHub Actions; the weekly scheduled run shows drift. Shared setup lives in `tests/core` (`createSuiteConfig`, `pageFixture`, `loadData`) - extend those instead of copying code between suites.
 
 ---
 
