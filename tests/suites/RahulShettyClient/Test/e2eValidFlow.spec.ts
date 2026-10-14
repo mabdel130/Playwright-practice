@@ -7,7 +7,7 @@ import { E2EData } from '../data/TestData';
 const e2eData = loadData<E2EData>(SUITE_DIR, 'e2e.data.json');
 
 test(`E2E: complete valid flow from registration to order confirmation [${ENV}]`, async ({
-  page, logger, authApi, registerPage, loginPage, addToCartPage, checkoutPage, autoScreenshot,
+  page, logger, authApi, registerPage, loginPage, addToCartPage, checkoutPage,
 }) => {
   test.skip(ENV === 'prod', 'E2E creates users/orders - not run on prod');
   const user = e2eData.user;

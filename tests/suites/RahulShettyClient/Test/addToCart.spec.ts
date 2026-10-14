@@ -15,7 +15,7 @@ test.describe(`RahulShettyClient - Add to Cart [${ENV}]`, () => {
     await expect(page).not.toHaveURL(/auth\/login/);
   });
 
-  test('TC05: add valid product to cart (positive)', async ({ addToCartPage, autoScreenshot }) => {
+  test('TC05: add valid product to cart (positive)', async ({ addToCartPage }) => {
     await test.step('TC05: Verify product is available', async () => {
       await expect(addToCartPage.getProductCardLocator(cartData.validProduct)).toBeVisible();
     });
@@ -30,7 +30,7 @@ test.describe(`RahulShettyClient - Add to Cart [${ENV}]`, () => {
     });
   });
 
-  test('TC06: verify invalid product is not available in cart (negative)', async ({ addToCartPage, logger, autoScreenshot }) => {
+  test('TC06: verify invalid product is not available in cart (negative)', async ({ addToCartPage, logger }) => {
     await test.step('TC06: Search for invalid product using search box', async () => {
       logger.info(`Searching for invalid product: ${cartData.invalidProduct}`);
       await addToCartPage.searchProduct(cartData.invalidProduct);

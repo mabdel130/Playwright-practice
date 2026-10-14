@@ -34,17 +34,26 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
+      // Browser-less tests of the framework code itself (ISTQB TAE ch.7).
+      name: 'unit',
+      testMatch: /tests[\\/]unit[\\/].*\.spec\.ts/,
+    },
+
+    {
       name: 'chromium',
+      testIgnore: /tests[\\/]unit[\\/]/,
       use: { ...devices['Desktop Chrome'] },
     },
 
     {
       name: 'firefox',
+      testIgnore: /tests[\\/]unit[\\/]/,
       use: { ...devices['Desktop Firefox'] },
     },
 
     {
       name: 'webkit',
+      testIgnore: /tests[\\/]unit[\\/]/,
       use: { ...devices['Desktop Safari'] },
     },
 

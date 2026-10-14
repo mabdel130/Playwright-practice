@@ -10,21 +10,21 @@ test.describe(`Alerts Handling [${ENV}]`, () => {
     await alertsPage.goto();
   });
 
-  test('Test 1: Handle Simple Alert', async ({ page, alertsPage, autoScreenshot }) => {
+  test('TC01: Handle Simple Alert', async ({ page, alertsPage }) => {
     const alertMessage = await alertsPage.handleSimpleAlert();
 
     expect(alertMessage.toLowerCase()).toContain('alert');
     await expect(page).toHaveURL(/testautomationpractice\.blogspot\.com/);
   });
 
-  test('Test 2: Handle Confirmation Alert', async ({ page, alertsPage, autoScreenshot }) => {
+  test('TC02: Handle Confirmation Alert', async ({ page, alertsPage }) => {
     const confirmMessage = await alertsPage.handleConfirmAlertAccept();
 
     expect(confirmMessage.toLowerCase()).toContain('button');
     await expect(page).toHaveURL(/testautomationpractice\.blogspot\.com/);
   });
 
-  test('Test 3: Handle Prompt Alert with Input', async ({ page, alertsPage, autoScreenshot }) => {
+  test('TC03: Handle Prompt Alert with Input', async ({ page, alertsPage }) => {
     const promptMessage = await alertsPage.handlePromptAlertWithInput(alertsData.promptInputText);
 
     expect(promptMessage.toLowerCase()).toContain('name');
