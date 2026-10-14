@@ -5,6 +5,8 @@ on:
     branches: [main, 'Task*']
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 5 * * 1' # weekly drift/flakiness check (ISTQB TAE ch.8)
   workflow_dispatch:
     inputs:
       environment:
@@ -36,7 +38,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify:
+    name: Verify the TAS (typecheck, lint, unit)
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run check:antipatterns
+      - run: npx playwright test --project=unit
+
   test:
+    needs: verify
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
@@ -82,12 +101,38 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps $PW_INSTALL
 
+      - name: Restore trend history
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            allure-results/history
+            test-results/flaky-history.json
+          key: trend-${{ env.TEST_ENV }}-${{ github.run_id }}
+          restore-keys: trend-${{ env.TEST_ENV }}-
+
       - name: Run Playwright tests
         run: npx playwright test tests/suites $PW_PROJECTS
 
+      - name: Compute metrics
+        if: ${{ !cancelled() }}
+        run: node scripts/metrics.js >> "$GITHUB_STEP_SUMMARY"
+        continue-on-error: true
+
       - name: Generate Allure report
         if: ${{ !cancelled() }}
-        run: npm run allure:generate
+        run: |
+          npm run allure:generate
+          mkdir -p allure-results/history && cp -r allure-report/history/. allure-results/history/
+        continue-on-error: true
+
+      - name: Save trend history
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            allure-results/history
+            test-results/flaky-history.json
+          key: trend-${{ env.TEST_ENV }}-${{ github.run_id }}
         continue-on-error: true
 
       - name: Upload reports
@@ -110,6 +155,8 @@ jobs:
             const fs = require('fs');
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             let summary = '';
+            let metricsMd = '';
+            if (fs.existsSync('test-results/metrics.md')) metricsMd = '\n\n' + fs.readFileSync('test-results/metrics.md', 'utf-8');
             if (fs.existsSync('test-results/results.json')) {
               const { stats } = JSON.parse(fs.readFileSync('test-results/results.json', 'utf-8'));
               summary = `✅ ${stats.expected} passed · ❌ ${stats.unexpected} failed · ⚠️ ${stats.flaky} flaky · ⏭️ ${stats.skipped} skipped`;
@@ -120,5 +167,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 📊 Test Results (${process.env.TEST_ENV}, ${process.env.BROWSERS})\n\n${summary}\n\nReports (Playwright HTML, Allure, JUnit/JSON) are in the **reports** artifact of [this run](${runUrl}).`,
+              body: `## 📊 Test Results (${process.env.TEST_ENV}, ${process.env.BROWSERS})\n\n${summary}${metricsMd}\n\nReports (Playwright HTML, Allure, JUnit/JSON) are in the **reports** artifact of [this run](${runUrl}).`,
             });

@@ -9,8 +9,8 @@ const DIRS_TO_WIPE = [
   'playwright-report',
 ];
 
-// Allure's history/ folder is carried over between runs so trends survive the wipe.
-const KEEP_IN_ALLURE_RESULTS = ['history'];
+// Trend data survives the wipe: Allure's history/ and the flaky-test log written by scripts/metrics.js.
+const KEEP = { 'allure-results': ['history'], 'test-results': ['flaky-history.json'] } as Record<string, string[]>;
 
 function wipe(abs: string, keep: string[] = []): void {
   if (keep.length === 0 || !fs.existsSync(abs)) {
@@ -41,7 +41,7 @@ export default async function globalSetup() {
   report(await checkBaseUrls(suitesDir, ENV), process.env.PREFLIGHT_STRICT === '1');
 
   for (const dir of DIRS_TO_WIPE) {
-    wipe(path.join(root, dir), dir === 'allure-results' ? KEEP_IN_ALLURE_RESULTS : []);
+    wipe(path.join(root, dir), KEEP[dir] ?? []);
   }
 
   // Defensive: wipe any leftover screenshots/ folders under tests/suites/*/screenshots

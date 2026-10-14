@@ -114,7 +114,8 @@ npx playwright install          # first time only
 ## Running Tests
 
 ```bash
-npm test                                          # all tests, all browsers
+npm test                                          # all tests (unit + all browsers)
+npm run verify                                    # typecheck + lint + anti-patterns + unit tests (no browser)
 npx playwright test tests/suites --project=chromium
 npx playwright test tests/suites/RahulShettyClient --project=chromium
 npx playwright test tests/suites/RahulShettyClient/Test/login.spec.ts
@@ -283,7 +284,7 @@ const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
 
 ### Fixtures and dependency injection
 
-`tests/core/fixtures.ts` provides `logger`, `autoScreenshot` and failure capture. Each suite extends it:
+`tests/core/fixtures.ts` provides `logger`, `autoScreenshot` (automatic) and failure capture. Each suite extends it, using `pageFixture(PageClass)` from `tests/core/pageFixture.ts`:
 
 ```typescript
 // tests/suites/RahulShettyClient/fixtures.ts
@@ -298,7 +299,7 @@ Specs import `test`/`expect` from **their suite's** `fixtures.ts`.
 
 ### Failure capture and logging
 
-On failure, a full-page screenshot and the test's buffered log (`[ISO time] STEP: …`) are attached to the HTML and Allure reports. Specs that request `autoScreenshot` also save a screenshot to `tests/suites/<Suite>/screenshots/` (gitignored, wiped before each run).
+On failure, a full-page screenshot and the test's buffered log (`[ISO time] STEP: …`) are attached to the HTML and Allure reports. `autoScreenshot` is an **auto fixture**, so every spec also saves a screenshot to `tests/suites/<Suite>/screenshots/` (gitignored, wiped before each run).
 
 ### Self-healing locators
 
@@ -353,7 +354,30 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 
 - The job **fails when a test fails**.
 - Artifact `reports-<env>-<browsers>` contains `playwright-report/`, `allure-report/` and `test-results/` (JUnit, JSON, traces).
-- On PRs, a comment with passed / failed / flaky / skipped counts and a link to the run.
+- On PRs, a comment with passed / failed / flaky / skipped counts, the metrics table and a link to the run. The same metrics go to the job summary.
+- A weekly scheduled run (Mondays 05:00 UTC) catches dependency drift and flakiness.
+- A `verify` job (typecheck, lint, anti-patterns, unit tests) runs first; the browser job `needs` it.
+
+## Verifying the TAS (ISTQB CTAL-TAE ch.7)
+
+The framework verifies itself before it verifies the product.  runs:
+
+| Check | What it catches |
+|---|---|
+|  | Type errors; , ,  are on |
+|  | ESLint +  (hard waits, , non-web-first assertions, element handles, invalid titles) |
+|  |  - the review-checklist greps, as a failing check |
+|  | Browser-less tests of  in  (self-healing, data/env loading, pre-flight, env parsing) |
+
+**Pre-flight (, run from )**: fails fast if  is invalid, a suite has no entry for the env, a  folder lacks files that  has, or a data file is invalid JSON. Base URLs are probed with a HEAD request and only warn, unless .
+
+## Continuous improvement (ISTQB CTAL-TAE ch.8)
+
+- **Metrics**:  (after a run) reads  and writes  / : pass rate, flaky count, duration, slowest tests, healed locators.
+- **Self-healing visibility**: when a backup locator is used, the test gets a  annotation (primary + backup), so healing is counted even in passing tests. Fix the primary locator when you see one.
+- **Trends**:  keeps  and ; CI restores and saves them between runs.
+- **Flaky policy**: a test that appears twice in  is fixed or quarantined ( with a ticket) within the sprint. Never add retries to hide it.
+- **Maintenance cadence**: Dependabot opens weekly PRs for npm and GitHub Actions; the weekly scheduled run shows drift. Shared setup lives in  (, , ) - extend those instead of copying code between suites.
 
 ---
 

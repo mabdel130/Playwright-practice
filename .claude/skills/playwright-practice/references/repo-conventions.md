@@ -18,7 +18,7 @@ tests/suites/<Suite>/
 1. `TEST_ENV` selects environment via `core/env.ts` (default: `test`)
 2. `loadData(SUITE_DIR, file)` reads `data/<ENV>/<file>`, replaces `{{timestamp}}` with `Date.now()`
 3. `loadEnvConfig(suiteDir)` reads `config/env.config.json[ENV]` (baseUrl, apiBaseUrl)
-4. `core/fixtures.ts` provides `logger` + `autoScreenshot`; suite fixtures layer on top
+4. `core/fixtures.ts` provides `logger` + `autoScreenshot` (auto - do not request it in specs); suite fixtures layer on top
 5. Data-driven: loop `for (const c of cases)` and `test()` once per case
 6. Specs import `{ test, expect }` from `../fixtures`
 
