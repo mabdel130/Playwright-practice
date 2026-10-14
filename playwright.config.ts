@@ -26,7 +26,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    trace: 'retain-on-failure',
+    // DEBUG_API=1 keeps a trace for every test: its Network tab shows each request/response (incl. API login) with screenshots.
+    trace: process.env.DEBUG_API === '1' ? 'on' : 'retain-on-failure',
     /* Built-in screenshot for every test: shown at the top level of the HTML and Allure reports */
     screenshot: { mode: 'on', fullPage: true },
     navigationTimeout: 60000,
@@ -38,17 +39,30 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
+      // Browser-less tests of the framework code itself (ISTQB TAE ch.7).
+      name: 'unit',
+      testMatch: /tests[\\/]unit[\\/].*\.spec\.ts/,
+    },
+
+    {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /tests[\\/]unit[\\/]/,
+      use: {
+        ...devices['Desktop Chrome'],
+        // DEVTOOLS=1 opens Chrome DevTools (Network tab) on every tab so browser traffic is recorded from the start.
+        launchOptions: { args: process.env.DEVTOOLS === '1' ? ['--auto-open-devtools-for-tabs'] : [] },
+      },
     },
 
     {
       name: 'firefox',
+      testIgnore: /tests[\\/]unit[\\/]/,
       use: { ...devices['Desktop Firefox'] },
     },
 
     {
       name: 'webkit',
+      testIgnore: /tests[\\/]unit[\\/]/,
       use: { ...devices['Desktop Safari'] },
     },
 

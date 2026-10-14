@@ -1,5 +1,8 @@
 import { test as base, expect, Page, TestInfo } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Logger } from './Logger';
+import { sanitizeFileName } from './fileName';
 
 export const test = base.extend<{ logger: Logger; autoScreenshot: void }>({
   logger: async ({}, use) => {
@@ -19,6 +22,7 @@ export const test = base.extend<{ logger: Logger; autoScreenshot: void }>({
 
 test.afterEach(async ({ page, logger }, testInfo) => {
   // Let in-flight XHRs settle so the end-of-test screenshot isn't a "Loading..." page. Best-effort, never fails the test.
+  // eslint-disable-next-line playwright/no-networkidle
   await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
 
   if (testInfo.status !== testInfo.expectedStatus) {
@@ -47,15 +51,13 @@ async function captureTestScreenshot(page: Page, testInfo: TestInfo): Promise<vo
     const fileName = `${sanitizedTitle} [${projectName}].png`;
 
     const filePath = testInfo.file;
-    const suiteMatch = filePath.match(/tests[\\\/]suites[\\\/]([^\\\/]+)/);
+    const suiteMatch = filePath.match(/tests[\\/]suites[\\/]([^\\/]+)/);
     const suiteName = suiteMatch ? suiteMatch[1] : 'general';
 
-    const screenshotDir = require('path').join(testInfo.config.rootDir, 'suites', suiteName, 'screenshots');
-    const screenshotPath = require('path').join(screenshotDir, fileName);
+    const screenshotDir = path.join(testInfo.config.rootDir, 'suites', suiteName, 'screenshots');
+    const screenshotPath = path.join(screenshotDir, fileName);
 
     if (!page.isClosed()) {
-      const fs = require('fs');
-      const path = require('path');
       const dir = path.dirname(screenshotPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -67,13 +69,6 @@ async function captureTestScreenshot(page: Page, testInfo: TestInfo): Promise<vo
   } catch (error) {
     console.error(`⚠️ Warning: Failed to capture screenshot: ${error}`);
   }
-}
-
-function sanitizeFileName(fileName: string): string {
-  return fileName
-    .replace(/[<>:"|?*]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 export { expect };

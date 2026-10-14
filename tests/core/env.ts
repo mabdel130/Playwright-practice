@@ -1,12 +1,15 @@
 export type EnvName = 'dev' | 'test' | 'staging' | 'prod';
 
-const validEnvs: EnvName[] = ['dev', 'test', 'staging', 'prod'];
-const envValue = (process.env.TEST_ENV ?? 'test') as string;
+export const VALID_ENVS: readonly EnvName[] = ['dev', 'test', 'staging', 'prod'];
 
-if (!validEnvs.includes(envValue as EnvName)) {
-  throw new Error(
-    `Invalid TEST_ENV: "${envValue}". Must be one of: ${validEnvs.join(' | ')}`
-  );
+export function parseEnv(value: string | undefined): EnvName {
+  const envValue = value ?? 'test';
+  if (!VALID_ENVS.includes(envValue as EnvName)) {
+    throw new Error(
+      `Invalid TEST_ENV: "${envValue}". Must be one of: ${VALID_ENVS.join(' | ')}`
+    );
+  }
+  return envValue as EnvName;
 }
 
-export const ENV: EnvName = envValue as EnvName;
+export const ENV: EnvName = parseEnv(process.env.TEST_ENV);

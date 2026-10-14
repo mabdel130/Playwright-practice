@@ -10,6 +10,8 @@ End-to-end and API test automation built with **Playwright 1.63** and **TypeScri
 - 📸 **Screenshot for every test**: attached to the HTML and Allure reports; the per-test log is also attached when a test fails
 - 🎯 **Allure, HTML, JUnit and JSON reports**
 - ⚡ **Fast CI**: Chromium by default, cached browsers, parallel workers
+- ✅ **Verified framework** (ISTQB CTAL-TAE ch.7): typecheck, ESLint, anti-pattern scan, unit tests and a pre-flight setup check
+- 📈 **Continuous improvement** (ISTQB CTAL-TAE ch.8): metrics, flaky and Allure history, self-healing visibility, Dependabot
 
 ---
 
@@ -23,12 +25,14 @@ tests/
 │   ├── SelfHealingLocator.ts          # Primary + backup locator strategies
 │   ├── contracts.ts                   # Navigable interface (pages that have a URL)
 │   ├── api/BaseApi.ts                 # Abstract API client (request, baseUrl, logger, post)
-│   ├── config/EnvConfig.ts            # loadEnvConfig(suiteDir) → config/env.config.json[ENV]
+│   ├── config/EnvConfig.ts            # loadEnvConfig(suiteDir), createSuiteConfig(__dirname)
 │   ├── data/DataLoader.ts             # loadData(suiteDir, file) → data/<ENV>/<file> + {{timestamp}}
-│   ├── env.ts                         # TEST_ENV selector (default: test)
-│   ├── fixtures.ts                    # Base test: logger, autoScreenshot, failure capture
-│   ├── TestDataFactory.ts             # faker re-export
-│   └── globalSetup.ts                 # Wipes old results/reports before each run
+│   ├── env.ts                         # parseEnv() + ENV (TEST_ENV, default: test)
+│   ├── fileName.ts                    # sanitizeFileName() for screenshot names
+│   ├── fixtures.ts                    # Base test: logger, auto autoScreenshot, failure capture
+│   ├── pageFixture.ts                 # pageFixture(PageClass) → one-line suite fixtures
+│   ├── preflight.ts                   # Static setup checks (env entry, data files per env, JSON)
+│   └── globalSetup.ts                 # Pre-flight, then wipes old results (keeps trend history)
 │
 ├── suites/
 │   ├── RahulShettyClient/             # Register → API login → cart → checkout → orders
@@ -55,20 +59,49 @@ tests/
 │   │   └── Test/login.spec.ts
 │   │
 │   ├── TestAutomationPractice/        # Browser dialogs (alert / confirm / prompt)
-│   │   ├── config/ data/ pages/       # AlertsPage
+│   │   ├── config/ data/ pages/       # TestAutomationPracticeBasePage, AlertsPage
 │   │   ├── fixtures.ts
 │   │   └── Test/alertsHandling.spec.ts
 │   │
 │   └── SpecialLocators/               # Locator strategies (Angular practice form + shop)
-│       ├── data/form.data.json
-│       ├── pages/AngularPracticePage.ts
+│       ├── config/env.config.json
+│       ├── data/{dev,test,staging,prod}/form.data.json
+│       ├── pages/                 # SpecialLocatorsBasePage, AngularPracticePage
 │       ├── fixtures.ts
 │       └── SpecialLocators.spec.ts
 │
-└── Typescript_Fundamentals/           # TypeScript language practice
+├── unit/                              # Browser-less tests of tests/core (project: unit)
+│   └── env, selfHealingLocator, dataAndConfig, preflight specs
+│
+└── Typescript_Fundamentals/           # TypeScript language practice (excluded from typecheck/lint)
+
+scripts/
+├── check-antipatterns.js              # Fails on waitForTimeout, .only, expect(await …), page.$
+└── metrics.js                         # results.json → metrics.json / metrics.md / flaky-history.json
+eslint.config.mjs                      # typescript-eslint + eslint-plugin-playwright
+.github/dependabot.yml                 # Weekly npm + GitHub Actions updates
 ```
 
 **Layers (gTAA):** specs (test definition) → suite fixtures (wiring) → page objects / API clients (adaptation) → core (framework services).
+
+---
+
+## Architecture (ISTQB CTAL-TAE ch.3 - gTAA)
+
+How this repo maps to the generic Test Automation Architecture:
+
+| gTAA layer | In this repo |
+|---|---|
+| Test generation | Hand-written specs; test cases come from JSON rows (`data/<env>/*.json`) and `createSuiteConfig` / `loadData` |
+| Test definition | `tests/suites/*/Test/*.spec.ts` and suite `fixtures.ts` - what to test, in `test.step` phases, with web-first assertions |
+| Test execution | Playwright runner configured in `playwright.config.ts`, `tests/core/globalSetup.ts` (pre-flight, cleanup) and the GitHub Actions workflow |
+| Test adaptation | Page objects (`pages/`) and API clients (`api/`) built on `BasePage` / `BaseApi`; `SelfHealingLocator` |
+| Reporting and logging | `Logger`, failure attachments, Playwright/Allure/JUnit/JSON reporters, `scripts/metrics.js` |
+| Configuration and environment | `TEST_ENV`, `config/env.config.json`, `tests/core/env.ts`, `tests/core/config/EnvConfig.ts` |
+
+Every suite has the same shape: `config/`, `data/<env>/`, `pages/<Suite>BasePage.ts` (loads the base URL through `createSuiteConfig`), page objects, `fixtures.ts` built with `pageFixture`, and the specs. Pages never call each other and specs never build dependencies - both rules keep the layers separate.
+
+Before automating anything new, read [docs/test-automation-strategy.md](docs/test-automation-strategy.md) (ISTQB CTAL-TAE ch.2: scope, tool choice, testability, environments, risks).
 
 ---
 
@@ -118,13 +151,26 @@ npx playwright install          # first time only
 ## Running Tests
 
 ```bash
-npm test                                          # all tests, all browsers
+npm test                                          # all tests (unit + all browsers)
+npm run verify                                    # typecheck + lint + anti-patterns + unit tests (no browser)
 npx playwright test tests/suites --project=chromium
 npx playwright test tests/suites/RahulShettyClient --project=chromium
 npx playwright test tests/suites/RahulShettyClient/Test/login.spec.ts
 npx playwright test --headed                      # see the browser while running
 npx playwright test --headed --project=chromium   # headed mode, single browser
 ```
+
+### Debugging: API responses, localStorage and the Network tab
+
+```bash
+npm run test:debug -- tests/suites/RahulShettyClient/Test/addToCart.spec.ts   # headed, 1 worker, DevTools open
+DEBUG_API=1 npx playwright test ...                                           # only print/attach, no DevTools
+```
+
+- `DEBUG_API=1` prints each API response (status + body) and the page `localStorage` after every `gotoRoute`, and attaches both to the test report (`api-response POST /auth/login`, `localStorage /dashboard/dash`). It is off by default because the output contains the login token.
+- `DEVTOOLS=1` opens Chrome DevTools on every tab (Chromium only), so the Network tab records the browser traffic from the first request.
+- `DEBUG_API=1` also keeps a **trace for every test**. Open it with `npx playwright show-trace test-results/<test-folder>/trace.zip`: its **Network** tab lists every request (including the API login) with headers and response body, next to a screenshot of the page at each step. Playwright cannot screenshot Chrome DevTools itself, so this is the way to get a Network view you can capture.
+- API login uses Playwright's `request` fixture, not the browser, so it does **not** appear in the Network tab. Read it from the console or the report attachment. The token only reaches the browser when it is injected into `localStorage` (`LoginPage.loginWithToken`).
 
 ### Headed Mode (Watch Tests Run)
 Run tests with the browser visible for debugging or observation:
@@ -311,7 +357,7 @@ const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
 
 ### Fixtures and dependency injection
 
-`tests/core/fixtures.ts` provides `logger`, `autoScreenshot` and failure capture. Each suite extends it:
+`tests/core/fixtures.ts` provides `logger`, `autoScreenshot` (automatic) and failure capture. Each suite extends it, using `pageFixture(PageClass)` from `tests/core/pageFixture.ts`:
 
 ```typescript
 // tests/suites/RahulShettyClient/fixtures.ts
@@ -340,6 +386,8 @@ await this.healingLocator.clickWithHealing(
 );
 ```
 
+When a backup locator is used, the test is annotated `healed` (primary + backup), so it is counted in `metrics.json` even if the test passes. Treat it as a defect in the primary locator.
+
 ### Waiting strategy
 
 The framework relies on Playwright's auto-waiting and **web-first assertions** (`await expect(locator).toHaveText(...)`). Specs don't use `networkidle`, `waitForTimeout` or per-call timeouts. Timeouts are set once in `playwright.config.ts`. The only `networkidle` wait is the best-effort one before the end-of-test screenshot, and `slowMo` is opt-in via `SLOWMO` for watching runs.
@@ -361,7 +409,7 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 | `retries` | 1 on CI, 0 locally |
 | `workers` | 50% of CPUs on CI, default locally |
 | Reporters | html, json (`test-results/results.json`), junit, list, allure-playwright |
-| Projects | chromium, firefox, webkit |
+| Projects | `unit` (no browser, `tests/unit`), chromium, firefox, webkit |
 
 ---
 
@@ -386,7 +434,30 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 
 - The job **fails when a test fails**.
 - Artifact `reports-<env>-<browsers>` contains `playwright-report/`, `allure-report/` and `test-results/` (JUnit, JSON, traces).
-- On PRs, a comment with passed / failed / flaky / skipped counts and a link to the run.
+- On PRs, a comment with passed / failed / flaky / skipped counts, the metrics table and a link to the run. The same metrics go to the job summary.
+- A weekly scheduled run (Mondays 05:00 UTC) catches dependency drift and flakiness.
+- A `verify` job (typecheck, lint, anti-patterns, unit tests) runs first; the browser job `needs` it.
+
+## Verifying the TAS (ISTQB CTAL-TAE ch.7)
+
+The framework verifies itself before it verifies the product. `npm run verify` runs:
+
+| Check | What it catches |
+|---|---|
+| `npm run typecheck` | Type errors; `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns` are on |
+| `npm run lint` | ESLint + `eslint-plugin-playwright` (hard waits, `.only`, non-web-first assertions, element handles, invalid titles) |
+| `npm run check:antipatterns` | `scripts/check-antipatterns.js` - the review-checklist greps, as a failing check |
+| `npm run test:unit` | Browser-less tests of `tests/core` in `tests/unit/` (self-healing, data/env loading, pre-flight, env parsing) |
+
+**Pre-flight (`tests/core/preflight.ts`, run from `globalSetup`)**: fails fast if `TEST_ENV` is invalid, a suite has no entry for the env, a `data/<env>/` folder lacks files that `data/test/` has, or a data file is invalid JSON. Base URLs are probed with a HEAD request and only warn, unless `PREFLIGHT_STRICT=1`.
+
+## Continuous improvement (ISTQB CTAL-TAE ch.8)
+
+- **Metrics**: `npm run metrics` (after a run) reads `test-results/results.json` and writes `metrics.json` / `metrics.md`: pass rate, flaky count, duration, slowest tests, healed locators.
+- **Self-healing visibility**: when a backup locator is used, the test gets a `healed` annotation (primary + backup), so healing is counted even in passing tests. Fix the primary locator when you see one.
+- **Trends**: `globalSetup` keeps `allure-results/history` and `test-results/flaky-history.json`; CI restores and saves them between runs.
+- **Flaky policy**: a test that appears twice in `flaky-history.json` is fixed or quarantined (`test.fixme` with a ticket) within the sprint. Never add retries to hide it.
+- **Maintenance cadence**: Dependabot opens weekly PRs for npm and GitHub Actions; the weekly scheduled run shows drift. Shared setup lives in `tests/core` (`createSuiteConfig`, `pageFixture`, `loadData`) - extend those instead of copying code between suites.
 
 ---
 
@@ -395,13 +466,15 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 1. Create `tests/suites/MySuite/{config,data/<env>,pages,Test}` and `config/env.config.json`.
 2. Pages extend `BasePage` (or a suite base), take `(page: Page, logger: ILogger)`, and implement `Navigable` if they have a URL:
    ```typescript
+   export const { suiteDir: SUITE_DIR, config: { baseUrl } } = createSuiteConfig(__dirname); // in pages/ or config/
    export class MyPage extends BasePage implements Navigable {
-     async goto() { await this.navigate(loadEnvConfig(SUITE_DIR).baseUrl); }
+     async goto() { await this.navigate(baseUrl); }
    }
    ```
 3. API clients extend `BaseApi`.
-4. Add `fixtures.ts` that extends `tests/core/fixtures` and injects your pages/APIs.
-5. Specs import from `../fixtures`, load data with `loadData`, and assert with web-first `expect`.
+4. Add `fixtures.ts` that extends `tests/core/fixtures` and injects your pages with `pageFixture(MyPage)` (APIs: `async ({ request, logger }, use) => use(new MyApi(request, logger))`).
+5. Specs import from `../fixtures`, load data with `loadData`, and assert with web-first `expect`. Do not request `autoScreenshot`; it is automatic.
+6. Put the same data files in all four `data/<env>/` folders; pre-flight fails the run if one is missing. Finish with `npm run verify`.
 
 ---
 
@@ -413,3 +486,6 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 - **Allure report missing or old**: `npm run allure:generate`, then `npm run allure:open`.
 - **Reports not updated after a run**: check the command for `-- headed` (should be `--headed`) or a `--reporter` override.
 - **TC11 product ID mismatch**: the site re-created its products. Update the IDs in `order.data.json` (all envs).
+- **Pre-flight failed at start**: the message names the suite and the missing env entry or data file. Fix it, or check `TEST_ENV`.
+- **Pre-flight URL warnings offline**: expected; set `PREFLIGHT_STRICT=1` only when you want them to fail the run.
+- **`npm run verify` fails on lint**: `npx eslint tests scripts --fix` handles the auto-fixable ones; the rest name the rule to read.

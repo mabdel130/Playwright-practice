@@ -1,9 +1,7 @@
-import * as path from 'path';
-import { BaseEnvConfig, loadEnvConfig } from '../../../core/config/EnvConfig';
+import { BaseEnvConfig, createSuiteConfig } from '../../../core/config/EnvConfig';
 
 export interface ClientEnvConfig extends BaseEnvConfig {
   apiBaseUrl: string;
 }
 
-export const SUITE_DIR = path.resolve(__dirname, '..');
-export const clientConfig = loadEnvConfig<ClientEnvConfig>(SUITE_DIR);
+export const { suiteDir: SUITE_DIR, config: clientConfig } = createSuiteConfig<ClientEnvConfig>(__dirname);

@@ -1,6 +1,5 @@
-import { Locator, Page } from '@playwright/test';
-import { BasePage } from '../../../core/BasePage';
-import { ILogger } from '../../../core/Logger';
+import { Locator } from '@playwright/test';
+import { SpecialLocatorsBasePage } from './SpecialLocatorsBasePage';
 import { Navigable } from '../../../core/contracts';
 
 export interface PracticeFormData {
@@ -11,13 +10,9 @@ export interface PracticeFormData {
   employmentStatus: string;
 }
 
-export class AngularPracticePage extends BasePage implements Navigable {
-  constructor(page: Page, logger: ILogger, private readonly url: string) {
-    super(page, logger);
-  }
-
+export class AngularPracticePage extends SpecialLocatorsBasePage implements Navigable {
   async goto(): Promise<void> {
-    await this.navigate(this.url);
+    await this.navigate(this.baseUrl);
   }
 
   async submitForm(data: PracticeFormData): Promise<void> {

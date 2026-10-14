@@ -1,15 +1,12 @@
 import { Locator } from '@playwright/test';
-import * as path from 'path';
-import { BasePage } from '../../../core/BasePage';
-import { loadEnvConfig } from '../../../core/config/EnvConfig';
+import { TestAutomationPracticeBasePage } from './TestAutomationPracticeBasePage';
 import { Navigable } from '../../../core/contracts';
 
-export const ALERTS_SUITE_DIR = path.resolve(__dirname, '..');
-const { baseUrl } = loadEnvConfig(ALERTS_SUITE_DIR);
+export { ALERTS_SUITE_DIR } from './TestAutomationPracticeBasePage';
 
-export class AlertsPage extends BasePage implements Navigable {
+export class AlertsPage extends TestAutomationPracticeBasePage implements Navigable {
   async goto(): Promise<void> {
-    await this.navigate(baseUrl);
+    await this.navigate(this.baseUrl);
   }
 
   private selectSimpleAlertButton(): Locator {

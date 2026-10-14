@@ -1,10 +1,11 @@
 import { test as base, expect } from '../../core/fixtures';
-import { faker } from '../../core/TestDataFactory';
+import { faker } from '@faker-js/faker';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AddToCartPage } from './pages/AddToCartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { pageFixture } from '../../core/pageFixture';
 import { AuthApi } from './api/AuthApi';
 import { CheckoutFlow } from './flows/CheckoutFlow';
 import { UserData } from './data/TestData';
@@ -36,10 +37,10 @@ type ClientFixtures = {
 };
 
 export const test = base.extend<ClientFixtures>({
-  loginPage: async ({ page, logger }, use) => use(new LoginPage(page, logger)),
-  registerPage: async ({ page, logger }, use) => use(new RegisterPage(page, logger)),
-  addToCartPage: async ({ page, logger }, use) => use(new AddToCartPage(page, logger)),
-  checkoutPage: async ({ page, logger }, use) => use(new CheckoutPage(page, logger)),
+  loginPage: pageFixture(LoginPage),
+  registerPage: pageFixture(RegisterPage),
+  addToCartPage: pageFixture(AddToCartPage),
+  checkoutPage: pageFixture(CheckoutPage),
   ordersPage: async ({ page, logger }, use) => use(new OrdersPage(page, logger)),
   authApi: async ({ request, logger }, use) => use(new AuthApi(request, logger)),
   checkoutFlow: async ({ addToCartPage, checkoutPage }, use) => use(new CheckoutFlow(addToCartPage, checkoutPage)),

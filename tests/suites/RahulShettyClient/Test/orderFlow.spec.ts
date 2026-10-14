@@ -14,7 +14,7 @@ test.describe(`RahulShettyClient - Order Flow [${ENV}]`, () => {
   });
 
   test('TC11: add 2 products, checkout and verify product IDs match JSON data (positive)', async ({
-    page, logger, addToCartPage, checkoutFlow, ordersPage, autoScreenshot,
+    page, logger, addToCartPage, checkoutFlow, ordersPage,
   }) => {
     const { products, checkout } = orderData;
     const productNames = products.map((p) => p.name);
