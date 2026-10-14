@@ -30,7 +30,7 @@
     "@eslint/js": "^9.39.5",
     "@faker-js/faker": "^8.0.2",
     "@playwright/test": "^1.63.0",
-    "@types/node": "^22.20.2",
+    "@types/node": "^26.6.5",
     "allure-commandline": "^2.46.1",
     "allure-playwright": "^3.12.2",
     "cross-env": "^7.0.3",
