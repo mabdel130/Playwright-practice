@@ -88,7 +88,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ env.BROWSERS }}
@@ -102,7 +102,7 @@ jobs:
         run: npx playwright install-deps $PW_INSTALL
 
       - name: Restore trend history
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             allure-results/history
@@ -127,7 +127,7 @@ jobs:
 
       - name: Save trend history
         if: ${{ !cancelled() }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             allure-results/history
