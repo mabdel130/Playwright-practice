@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint tests scripts --ignore-pattern tests/Typescript_Fundamentals",
     "check:antipatterns": "node scripts/check-antipatterns.js",
-    "test:unit": "playwright test --project=unit",
+    "test:unit": "cross-env UNIT_ONLY=1 playwright test --project=unit",
     "metrics": "node scripts/metrics.js",
     "verify": "npm run typecheck && npm run lint && npm run check:antipatterns && npm run test:unit"
   },

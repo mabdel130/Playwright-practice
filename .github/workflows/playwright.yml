@@ -52,7 +52,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run check:antipatterns
-      - run: npx playwright test --project=unit
+      - run: npm run test:unit
 
   test:
     needs: verify

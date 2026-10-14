@@ -32,6 +32,9 @@ function report(issues: PreflightIssue[], strict: boolean): void {
 }
 
 export default async function globalSetup() {
+  // Unit-only runs (npm run test:unit / verify) must not delete the screenshots and reports of the last browser run.
+  if (process.env.UNIT_ONLY === '1') return;
+
   const root = path.resolve(__dirname, '..', '..');
   const suitesDir = path.resolve(__dirname, '..', 'suites');
 
