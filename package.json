@@ -33,7 +33,7 @@
     "@types/node": "^22.20.2",
     "allure-commandline": "^2.46.1",
     "allure-playwright": "^3.12.2",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.5",
     "eslint-plugin-playwright": "^2.12.1",
     "typescript": "^6.0.3",
