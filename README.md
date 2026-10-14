@@ -55,13 +55,14 @@ tests/
 │   │   └── Test/login.spec.ts
 │   │
 │   ├── TestAutomationPractice/        # Browser dialogs (alert / confirm / prompt)
-│   │   ├── config/ data/ pages/       # AlertsPage
+│   │   ├── config/ data/ pages/       # TestAutomationPracticeBasePage, AlertsPage
 │   │   ├── fixtures.ts
 │   │   └── Test/alertsHandling.spec.ts
 │   │
 │   └── SpecialLocators/               # Locator strategies (Angular practice form + shop)
+│       ├── config/env.config.json
 │       ├── data/{dev,test,staging,prod}/form.data.json
-│       ├── pages/AngularPracticePage.ts
+│       ├── pages/                 # SpecialLocatorsBasePage, AngularPracticePage
 │       ├── fixtures.ts
 │       └── SpecialLocators.spec.ts
 │
@@ -78,6 +79,25 @@ eslint.config.mjs                      # typescript-eslint + eslint-plugin-playw
 ```
 
 **Layers (gTAA):** specs (test definition) → suite fixtures (wiring) → page objects / API clients (adaptation) → core (framework services).
+
+---
+
+## Architecture (ISTQB CTAL-TAE ch.3 - gTAA)
+
+How this repo maps to the generic Test Automation Architecture:
+
+| gTAA layer | In this repo |
+|---|---|
+| Test generation | Hand-written specs; test cases come from JSON rows (`data/<env>/*.json`) and `createSuiteConfig` / `loadData` |
+| Test definition | `tests/suites/*/Test/*.spec.ts` and suite `fixtures.ts` - what to test, in `test.step` phases, with web-first assertions |
+| Test execution | Playwright runner configured in `playwright.config.ts`, `tests/core/globalSetup.ts` (pre-flight, cleanup) and the GitHub Actions workflow |
+| Test adaptation | Page objects (`pages/`) and API clients (`api/`) built on `BasePage` / `BaseApi`; `SelfHealingLocator` |
+| Reporting and logging | `Logger`, failure attachments, Playwright/Allure/JUnit/JSON reporters, `scripts/metrics.js` |
+| Configuration and environment | `TEST_ENV`, `config/env.config.json`, `tests/core/env.ts`, `tests/core/config/EnvConfig.ts` |
+
+Every suite has the same shape: `config/`, `data/<env>/`, `pages/<Suite>BasePage.ts` (loads the base URL through `createSuiteConfig`), page objects, `fixtures.ts` built with `pageFixture`, and the specs. Pages never call each other and specs never build dependencies - both rules keep the layers separate.
+
+Before automating anything new, read [docs/test-automation-strategy.md](docs/test-automation-strategy.md) (ISTQB CTAL-TAE ch.2: scope, tool choice, testability, environments, risks).
 
 ---
 

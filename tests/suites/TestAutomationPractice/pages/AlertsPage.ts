@@ -1,13 +1,12 @@
 import { Locator } from '@playwright/test';
-import { BasePage } from '../../../core/BasePage';
-import { createSuiteConfig } from '../../../core/config/EnvConfig';
+import { TestAutomationPracticeBasePage } from './TestAutomationPracticeBasePage';
 import { Navigable } from '../../../core/contracts';
 
-export const { suiteDir: ALERTS_SUITE_DIR, config: { baseUrl } } = createSuiteConfig(__dirname);
+export { ALERTS_SUITE_DIR } from './TestAutomationPracticeBasePage';
 
-export class AlertsPage extends BasePage implements Navigable {
+export class AlertsPage extends TestAutomationPracticeBasePage implements Navigable {
   async goto(): Promise<void> {
-    await this.navigate(baseUrl);
+    await this.navigate(this.baseUrl);
   }
 
   private selectSimpleAlertButton(): Locator {
