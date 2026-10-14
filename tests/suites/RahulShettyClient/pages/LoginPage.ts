@@ -31,7 +31,6 @@ export class LoginPage extends ClientBasePage implements Navigable {
     const setToken = (t: string) =>
       (globalThis as unknown as { localStorage: { setItem(k: string, v: string): void } }).localStorage.setItem('token', t);
     await this.page.addInitScript(setToken, token);
-    // The app reads the token only at bootstrap, so an already-loaded app must reload.
     if (this.page.url().startsWith('http')) {
       await this.page.reload({ waitUntil: 'domcontentloaded' });
     }

@@ -28,8 +28,12 @@ export default defineConfig({
   use: {
     // DEBUG_API=1 keeps a trace for every test: its Network tab shows each request/response (incl. API login) with screenshots.
     trace: process.env.DEBUG_API === '1' ? 'on' : 'retain-on-failure',
+    /* Built-in screenshot for every test: shown at the top level of the HTML and Allure reports */
+    screenshot: { mode: 'on', fullPage: true },
     navigationTimeout: 60000,
     actionTimeout: 60000,
+    /* Slow each action down to watch a headed run, e.g. SLOWMO=800 */
+    launchOptions: { slowMo: Number(process.env.SLOWMO ?? 0) },
   },
 
   /* Configure projects for major browsers */

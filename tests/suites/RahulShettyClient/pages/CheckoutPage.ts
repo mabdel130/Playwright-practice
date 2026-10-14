@@ -2,6 +2,11 @@ import { Locator } from '@playwright/test';
 import { ClientBasePage } from './ClientBasePage';
 import { CheckoutData } from '../data/TestData';
 
+export interface CreateOrderResult {
+  orderIds: string[];
+  productIds: string[];
+}
+
 export class CheckoutPage extends ClientBasePage {
   private selectCreditCardRow(): Locator {
     return this.page.locator('.form__cc').locator('.row').nth(0);
@@ -89,5 +94,23 @@ export class CheckoutPage extends ClientBasePage {
   async clickPlaceOrder(): Promise<void> {
     this.logger.step('Clicking place order button');
     await this.clickWhenVisible(this.selectPlaceOrderButton());
+  }
+
+  async placeOrderAndCaptureResponse(): Promise<CreateOrderResult> {
+    const [response] = await Promise.all([
+      this.page.waitForResponse(
+        (r) => r.url().includes('/order/create-order') && r.request().method() === 'POST',
+      ),
+      this.clickPlaceOrder(),
+    ]);
+    if (!response.ok()) {
+      throw new Error(`create-order failed: HTTP ${response.status()} ${await response.text()}`);
+    }
+    const { orders, productOrderId } = (await response.json()) as { orders?: string[]; productOrderId?: string[] };
+    if (!orders?.length || !productOrderId?.length) {
+      throw new Error('create-order response contained no order/product IDs');
+    }
+    this.logger.info(`API response - order IDs: ${orders.join(', ')} | product IDs: ${productOrderId.join(', ')}`);
+    return { orderIds: orders, productIds: productOrderId };
   }
 }

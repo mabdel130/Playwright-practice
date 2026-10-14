@@ -39,7 +39,6 @@ export interface LoginCase {
 }
 
 export interface CartData {
-  userRef: string;
   validProduct: string;
   invalidProduct: string;
 }
@@ -47,6 +46,16 @@ export interface CartData {
 export interface E2EData {
   user: UserData;
   product: string;
+  checkout: CheckoutData;
+}
+
+export interface ProductRef {
+  name: string;
+  id: string;
+}
+
+export interface OrderFlowData {
+  products: ProductRef[];
   checkout: CheckoutData;
 }
 
