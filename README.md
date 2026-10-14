@@ -156,6 +156,17 @@ npx playwright test --headed                      # see the browser while runnin
 npx playwright test --headed --project=chromium   # headed mode, single browser
 ```
 
+### Debugging: API responses, localStorage and the Network tab
+
+```bash
+npm run test:debug -- tests/suites/RahulShettyClient/Test/addToCart.spec.ts   # headed, 1 worker, DevTools open
+DEBUG_API=1 npx playwright test ...                                           # only print/attach, no DevTools
+```
+
+- `DEBUG_API=1` prints each API response (status + body) and the page `localStorage` after every `gotoRoute`, and attaches both to the test report (`api-response POST /auth/login`, `localStorage /dashboard/dash`). It is off by default because the output contains the login token.
+- `DEVTOOLS=1` opens Chrome DevTools on every tab (Chromium only), so the Network tab records the browser traffic from the first request.
+- API login uses Playwright's `request` fixture, not the browser, so it does **not** appear in the Network tab. Read it from the console or the report attachment. The token only reaches the browser when it is injected into `localStorage` (`LoginPage.loginWithToken`).
+
 ### Headed Mode (Watch Tests Run)
 Run tests with the browser visible for debugging or observation:
 

@@ -42,7 +42,11 @@ export default defineConfig({
     {
       name: 'chromium',
       testIgnore: /tests[\\/]unit[\\/]/,
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // DEVTOOLS=1 opens Chrome DevTools (Network tab) on every tab so browser traffic is recorded from the start.
+        launchOptions: { args: process.env.DEVTOOLS === '1' ? ['--auto-open-devtools-for-tabs'] : [] },
+      },
     },
 
     {
