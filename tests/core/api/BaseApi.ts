@@ -1,5 +1,6 @@
 import { APIRequestContext, APIResponse } from '@playwright/test';
 import { ILogger } from '../Logger';
+import { recordApiResponse } from '../debug';
 
 export abstract class BaseApi {
   constructor(
@@ -10,6 +11,9 @@ export abstract class BaseApi {
 
   protected async post(endpoint: string, data: unknown): Promise<APIResponse> {
     this.logger.step(`POST ${endpoint}`);
-    return this.request.post(`${this.baseUrl}${endpoint}`, { data });
+    const url = `${this.baseUrl}${endpoint}`;
+    const response = await this.request.post(url, { data });
+    await recordApiResponse(this.logger, 'POST', url, response);
+    return response;
   }
 }

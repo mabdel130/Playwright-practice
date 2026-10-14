@@ -9,7 +9,7 @@ interface SauceLoginData {
 
 const loginData = loadData<SauceLoginData>(SAUCE_SUITE_DIR, 'login.data.json');
 
-test(`SauceDemo - Login [${ENV}]: verifies that the default user logged successfully with valid data and is redirected to the inventory page`, async ({ page, loginPage, inventoryPage, autoScreenshot }) => {
+test(`SauceDemo - Login [${ENV}]: verifies that the default user logged successfully with valid data and is redirected to the inventory page`, async ({ page, loginPage, inventoryPage }) => {
   const { username, password } = loginData.credentials[0];
   await loginPage.goto();
   await loginPage.login(username, password);
