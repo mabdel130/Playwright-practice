@@ -63,7 +63,7 @@ Risks: the sites are public and can change or go offline without notice. Pre-fli
 
 ## 7. Roles and maintenance
 
-One owner (the repository author) writes and maintains tests and the framework. Maintenance cadence: Dependabot weekly, a scheduled CI run weekly, and `npm run verify` before every pull request.
+One owner (the repository author) writes and maintains tests and the framework. Maintenance cadence: a scheduled CI health check bi-weekly (days 1 and 15), and `npm run verify` before every pull request.
 
 ## 8. Risks and contingencies
 
@@ -72,4 +72,4 @@ One owner (the repository author) writes and maintains tests and the framework. 
 | Target site changes a locator | Test fails | Self-healing backups log a `healed` annotation; fix the primary locator |
 | Target site down or slow | Many failures | Pre-flight warning; re-run; do not raise timeouts as a fix |
 | Flaky tests | Loss of trust | Track in `flaky-history.json`; fix or quarantine with `test.fixme` |
-| Dependency or browser update breaks tests | Failing CI | Dependabot PRs run the full pipeline before merge |
+| Dependency or browser update breaks tests | Failing CI | Update dependencies in a PR so the full pipeline runs before merge |

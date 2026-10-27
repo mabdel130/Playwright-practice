@@ -6,27 +6,19 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 5 * * 1' # weekly drift/flakiness check (ISTQB TAE ch.8)
+    - cron: '0 5 1,15 * *'
   workflow_dispatch:
     inputs:
       environment:
         description: 'Environment to test'
-        required: true
         default: 'test'
         type: choice
-        options:
-          - dev
-          - test
-          - staging
-          - prod
+        options: [dev, test, staging, prod]
       browsers:
         description: 'Browsers to run'
-        required: true
         default: 'chromium'
         type: choice
-        options:
-          - chromium
-          - all
+        options: [chromium, all]
 
 permissions:
   contents: read
@@ -39,7 +31,6 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify the TAS (typecheck, lint, unit)
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -47,59 +38,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'npm'
+          cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run check:antipatterns
-      - run: npm run test:unit
+      - run: npm run verify
 
   test:
     needs: verify
     timeout-minutes: 30
     runs-on: ubuntu-latest
-
     env:
-      TEST_ENV: ${{ github.event.inputs.environment || 'test' }}
-      BROWSERS: ${{ github.event.inputs.browsers || 'chromium' }}
-
+      TEST_ENV: ${{ inputs.environment || 'test' }}
+      BROWSERS: ${{ inputs.browsers || 'chromium' }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'npm'
+          cache: npm
+      - run: npm ci
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Resolve browser list
-        run: |
-          if [ "$BROWSERS" = "all" ]; then
-            echo "PW_INSTALL=chromium firefox webkit" >> "$GITHUB_ENV"
-            echo "PW_PROJECTS=" >> "$GITHUB_ENV"
-          else
-            echo "PW_INSTALL=chromium" >> "$GITHUB_ENV"
-            echo "PW_PROJECTS=--project=chromium" >> "$GITHUB_ENV"
-          fi
-
-      - name: Cache Playwright browsers
-        id: pw-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ env.BROWSERS }}
-
-      - name: Install Playwright browsers
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps $PW_INSTALL
-
-      - name: Install Playwright system dependencies
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps $PW_INSTALL
+      - name: Install browsers
+        run: npx playwright install --with-deps ${{ env.BROWSERS == 'chromium' && 'chromium' || '' }}
 
       - name: Restore trend history
         uses: actions/cache/restore@v4
@@ -110,30 +69,26 @@ jobs:
           key: trend-${{ env.TEST_ENV }}-${{ github.run_id }}
           restore-keys: trend-${{ env.TEST_ENV }}-
 
-      - name: Run Playwright tests
-        run: npx playwright test tests/suites $PW_PROJECTS
+      - name: Run tests
+        run: npx playwright test tests/suites ${{ env.BROWSERS == 'chromium' && '--project=chromium' || '' }}
 
-      - name: Compute metrics
+      - name: Metrics and Allure report
         if: ${{ !cancelled() }}
-        run: node scripts/metrics.js >> "$GITHUB_STEP_SUMMARY"
         continue-on-error: true
-
-      - name: Generate Allure report
-        if: ${{ !cancelled() }}
         run: |
+          node scripts/metrics.js >> "$GITHUB_STEP_SUMMARY"
           npm run allure:generate
           mkdir -p allure-results/history && cp -r allure-report/history/. allure-results/history/
-        continue-on-error: true
 
       - name: Save trend history
         if: ${{ !cancelled() }}
+        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: |
             allure-results/history
             test-results/flaky-history.json
           key: trend-${{ env.TEST_ENV }}-${{ github.run_id }}
-        continue-on-error: true
 
       - name: Upload reports
         if: ${{ !cancelled() }}
@@ -146,26 +101,22 @@ jobs:
             test-results/
           retention-days: 14
 
-      - name: Comment PR with test results
+      - name: Comment on PR
         if: github.event_name == 'pull_request' && !cancelled()
-        uses: actions/github-script@v7
         continue-on-error: true
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
+            const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf-8') : '');
+            const results = read('test-results/results.json');
+            const s = results && JSON.parse(results).stats;
+            const summary = s
+              ? `✅ ${s.expected} passed · ❌ ${s.unexpected} failed · ⚠️ ${s.flaky} flaky · ⏭️ ${s.skipped} skipped`
+              : '⚠️ No results file was produced.';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            let summary = '';
-            let metricsMd = '';
-            if (fs.existsSync('test-results/metrics.md')) metricsMd = '\n\n' + fs.readFileSync('test-results/metrics.md', 'utf-8');
-            if (fs.existsSync('test-results/results.json')) {
-              const { stats } = JSON.parse(fs.readFileSync('test-results/results.json', 'utf-8'));
-              summary = `✅ ${stats.expected} passed · ❌ ${stats.unexpected} failed · ⚠️ ${stats.flaky} flaky · ⏭️ ${stats.skipped} skipped`;
-            } else {
-              summary = '⚠️ No results file was produced.';
-            }
             await github.rest.issues.createComment({
+              ...context.repo,
               issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 📊 Test Results (${process.env.TEST_ENV}, ${process.env.BROWSERS})\n\n${summary}${metricsMd}\n\nReports (Playwright HTML, Allure, JUnit/JSON) are in the **reports** artifact of [this run](${runUrl}).`,
+              body: `## 📊 Test Results (${process.env.TEST_ENV}, ${process.env.BROWSERS})\n\n${summary}\n\n${read('test-results/metrics.md')}\n\nReports are in the **reports** artifact of [this run](${runUrl}).`,
             });

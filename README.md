@@ -9,9 +9,9 @@ End-to-end and API test automation built with **Playwright 1.63** and **TypeScri
 - 🗂️ **JSON data-driven, multi-environment**: `dev` / `test` / `staging` / `prod` data and URLs per suite
 - 📸 **Screenshot for every test**: attached to the HTML and Allure reports; the per-test log is also attached when a test fails
 - 🎯 **Allure, HTML, JUnit and JSON reports**
-- ⚡ **Fast CI**: Chromium by default, cached browsers, parallel workers
+- ⚡ **Simple CI**: runs on every PR, plus a bi-weekly health check; Chromium by default
 - ✅ **Verified framework** (ISTQB CTAL-TAE ch.7): typecheck, ESLint, anti-pattern scan, unit tests and a pre-flight setup check
-- 📈 **Continuous improvement** (ISTQB CTAL-TAE ch.8): metrics, flaky and Allure history, self-healing visibility, Dependabot
+- 📈 **Continuous improvement** (ISTQB CTAL-TAE ch.8): metrics, flaky and Allure history, self-healing visibility
 
 ---
 
@@ -79,7 +79,7 @@ scripts/
 ├── check-antipatterns.js              # Fails on waitForTimeout, .only, expect(await …), page.$
 └── metrics.js                         # results.json → metrics.json / metrics.md / flaky-history.json
 eslint.config.mjs                      # typescript-eslint + eslint-plugin-playwright
-.github/dependabot.yml                 # Weekly npm + GitHub Actions updates
+.github/workflows/playwright.yml       # CI: verify job, then browser tests
 ```
 
 **Layers (gTAA):** specs (test definition) → suite fixtures (wiring) → page objects / API clients (adaptation) → core (framework services).
@@ -241,7 +241,7 @@ After running tests, view results in different formats:
 |--------|---------|------|
 | **Playwright HTML** | Timeline, screenshots, videos, traces | `npx playwright show-report` |
 | **Allure** | Executive summary, test matrix, trends | `npm run allure:open` |
-| **JUnit** | CI/CD integration (Jenkins, GitLab, etc.) | `test-results/results.xml` |
+| **JUnit** | CI/CD integration (Jenkins, GitLab, etc.) | `test-results/junit.xml` |
 | **JSON** | Programmatic parsing | `test-results/results.json` |
 | **Traces** | Step-by-step execution details | `npx playwright show-trace <trace.zip>` |
 
@@ -403,40 +403,48 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 | `timeout` | 60 s per test |
 | `expect.timeout` | 10 s (web-first assertions) |
 | `navigationTimeout` / `actionTimeout` | 60 s |
-| `trace` | `retain-on-failure` |
+| `trace` | `retain-on-failure`; `on` when `DEBUG_API=1` |
 | `screenshot` | `on`, full page (every test) |
-| `launchOptions.slowMo` | `SLOWMO` env var, default `0` |
-| `retries` | 1 on CI, 0 locally |
-| `workers` | 50% of CPUs on CI, default locally |
-| Reporters | html, json (`test-results/results.json`), junit, list, allure-playwright |
-| Projects | `unit` (no browser, `tests/unit`), chromium, firefox, webkit |
+| `launchOptions.slowMo` | `SLOWMO` env var, default `0` (all projects, Chromium included) |
+| `fullyParallel` | `false` |
+| `retries` | 2 on CI, 0 locally |
+| `workers` | 1 on CI, default locally |
+| Reporters | list, html, json (`test-results/results.json`), junit (`test-results/junit.xml`), allure-playwright |
+| Projects | `unit` (no browser, `tests/unit`), chromium, firefox, webkit, Mobile Chrome, Mobile Safari |
+
+Every browser project ignores `tests/unit/`, so unit tests run once, in the `unit` project only.
 
 ---
 
 ## CI/CD (GitHub Actions)
 
-`.github/workflows/playwright.yml` runs on push to `main` / `Task*`, on PRs to `main`, and manually.
+`.github/workflows/playwright.yml` has two jobs:
+
+```
+verify (npm run verify) ──passes──► test (browser tests in tests/suites)
+```
+
+**When it runs**
 
 | Trigger | Environment | Browsers |
 |---|---|---|
-| push / pull_request | `test` | Chromium |
+| Pull request to `main` | `test` | Chromium |
+| Push to `main` / `Task*` | `test` | Chromium |
+| Health check: days 1 and 15 of each month, 05:00 UTC | `test` | Chromium |
 | Run workflow (manual) | choose `dev` / `test` / `staging` / `prod` | choose `chromium` or `all` |
 
-**What makes it fast**
+**How it stays simple**
 
-- Only the selected browsers are installed, and they're **cached** (`~/.cache/ms-playwright`). On a cache hit, only the OS dependencies are installed.
-- Tests run in **parallel** (50% workers), with 1 retry and traces kept only for failures.
-- No `slowMo` or fixed sleeps in specs.
+- `verify` is one step, `npm run verify`. If the framework is broken, browser tests don't run.
+- Only the selected browsers are installed, with one `npx playwright install --with-deps` step (no browser cache, as Playwright recommends).
 - A newer push to the same branch **cancels** the older run (`concurrency`).
-- One artifact upload instead of five. No blocking `show-report` step.
+- One artifact upload. No blocking `show-report` step.
 
 **Outputs**
 
 - The job **fails when a test fails**.
-- Artifact `reports-<env>-<browsers>` contains `playwright-report/`, `allure-report/` and `test-results/` (JUnit, JSON, traces).
+- Artifact `reports-<env>-<browsers>` contains `playwright-report/`, `allure-report/` and `test-results/` (JUnit, JSON, traces). It's kept for 14 days.
 - On PRs, a comment with passed / failed / flaky / skipped counts, the metrics table and a link to the run. The same metrics go to the job summary.
-- A weekly scheduled run (Mondays 05:00 UTC) catches dependency drift and flakiness.
-- A `verify` job (typecheck, lint, anti-patterns, unit tests) runs first; the browser job `needs` it.
 
 ## Verifying the TAS (ISTQB CTAL-TAE ch.7)
 
@@ -457,7 +465,7 @@ The framework verifies itself before it verifies the product. `npm run verify` r
 - **Self-healing visibility**: when a backup locator is used, the test gets a `healed` annotation (primary + backup), so healing is counted even in passing tests. Fix the primary locator when you see one.
 - **Trends**: `globalSetup` keeps `allure-results/history` and `test-results/flaky-history.json`; CI restores and saves them between runs.
 - **Flaky policy**: a test that appears twice in `flaky-history.json` is fixed or quarantined (`test.fixme` with a ticket) within the sprint. Never add retries to hide it.
-- **Maintenance cadence**: Dependabot opens weekly PRs for npm and GitHub Actions; the weekly scheduled run shows drift. Shared setup lives in `tests/core` (`createSuiteConfig`, `pageFixture`, `loadData`) - extend those instead of copying code between suites.
+- **Maintenance cadence**: the bi-weekly health check (days 1 and 15) shows drift and flakiness even when no code changes. Shared setup lives in `tests/core` (`createSuiteConfig`, `pageFixture`, `loadData`) - extend those instead of copying code between suites.
 
 ---
 
