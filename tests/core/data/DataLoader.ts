@@ -12,10 +12,12 @@ function readEnvFile(filePath: string): Record<string, string> {
  * Priority: real environment (CI secrets) > <suite>/.env.<TEST_ENV> > <suite>/.env
  */
 export function loadSuiteEnv(suiteDir: string): Record<string, string | undefined> {
+  // GitHub Actions passes an unset secret as "", so empty environment variables count as not set.
+  const realEnv = Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined && value !== ''));
   return {
     ...readEnvFile(path.join(suiteDir, '.env')),
     ...readEnvFile(path.join(suiteDir, `.env.${ENV}`)),
-    ...process.env,
+    ...realEnv,
   };
 }
 
