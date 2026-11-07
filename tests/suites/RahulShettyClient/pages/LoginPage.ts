@@ -31,11 +31,8 @@ export class LoginPage extends ClientBasePage implements Navigable {
     const setToken = (t: string) =>
       (globalThis as unknown as { localStorage: { setItem(k: string, v: string): void } }).localStorage.setItem('token', t);
     await this.page.addInitScript(setToken, token);
-    // The app uses hash routes (#/auth/... -> #/dashboard/...). Going from one to another is not a
-    // real page load, so the app may never re-read the token. Leaving the site guarantees the next
-    // goto() is a full load: the init script sets the token before the app starts.
     if (this.page.url().startsWith('http')) {
-      await this.page.goto('about:blank');
+      await this.page.reload({ waitUntil: 'domcontentloaded' });
     }
   }
 }

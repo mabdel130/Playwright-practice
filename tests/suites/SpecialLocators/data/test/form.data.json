@@ -1,8 +1,8 @@
 {
   "form": {
     "name": "Ahmed",
-    "email": "${FORM_EMAIL}",
-    "password": "${FORM_PASSWORD}",
+    "email": "moamed014@gmail.com",
+    "password": "Test@2456",
     "gender": "Male",
     "employmentStatus": "Student"
   },

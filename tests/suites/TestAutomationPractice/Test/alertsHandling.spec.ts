@@ -6,12 +6,8 @@ import { ALERTS_SUITE_DIR } from '../pages/AlertsPage';
 const alertsData = loadData<{ promptInputText: string }>(ALERTS_SUITE_DIR, 'alerts.data.json');
 
 test.describe(`Alerts Handling [${ENV}]`, () => {
-  test.beforeEach(async ({ page, alertsPage }) => {
+  test.beforeEach(async ({ alertsPage }) => {
     await alertsPage.goto();
-    // Google (Blogger) answers some data-center IPs, e.g. GitHub Actions runners, with a reCAPTCHA page
-    // instead of the site. That is not a product defect, so skip with the reason instead of failing.
-    const blockedByCaptcha = await page.getByText(/unusual traffic from your computer network/i).isVisible();
-    test.skip(blockedByCaptcha, 'Site returned Google reCAPTCHA ("unusual traffic") - this runner IP is blocked');
   });
 
   test('TC01: Handle Simple Alert', async ({ page, alertsPage }) => {

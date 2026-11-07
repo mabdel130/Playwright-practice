@@ -1,7 +1,4 @@
 {
   "validProduct": "ZARA COAT 3",
-  "invalidProduct": "NON EXISTENT PRODUCT",
-  "productsToAdd": ["ZARA COAT 3", "ADIDAS ORIGINAL"],
-  "productToRemove": "ADIDAS ORIGINAL",
-  "productNotInCart": "IPHONE 13 PRO"
+  "invalidProduct": "NON EXISTENT PRODUCT"
 }
