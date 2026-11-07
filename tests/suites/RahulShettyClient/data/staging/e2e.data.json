@@ -2,11 +2,11 @@
   "user": {
     "firstName": "JsonDriven",
     "lastName": "TestUser",
-    "email": "e2e.user.{{timestamp}}@gmail.com",
+    "email": "${CLIENT_E2E_EMAIL}",
     "phone": "9876543210",
     "occupation": "3: Engineer",
     "gender": "Male",
-    "password": "E2ETest@Rahul123"
+    "password": "${CLIENT_E2E_PASSWORD}"
   },
   "product": "ZARA COAT 3",
   "checkout": {

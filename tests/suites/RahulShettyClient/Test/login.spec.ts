@@ -11,7 +11,14 @@ const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
 test.describe(`RahulShettyClient - Login API [${ENV}]`, () => {
   for (const testCase of loginCases) {
-    test(`${testCase.id}: ${testCase.title}`, async ({ page, authApi }) => {
+    // Tags come from the data: success -> @valid, error -> @invalid. TC01 is the smoke check.
+    test(`${testCase.id}: ${testCase.title}`, {
+      tag: [
+        testCase.expected.type === 'success' ? '@valid' : '@invalid',
+        testCase.id === 'TC01' ? '@smoke' : '@regression',
+        '@login',
+      ],
+    }, async ({ page, authApi }) => {
       const { email, password } = resolveCredentials(users, testCase);
 
       const response = await test.step(`${testCase.id}: POST /auth/login (${testCase.technique})`, async () => {
