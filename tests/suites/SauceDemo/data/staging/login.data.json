@@ -1,8 +1,8 @@
 {
   "credentials": [
     {
-      "username": "standard_user",
-      "password": "secret_sauce"
+      "username": "${SAUCE_USERNAME}",
+      "password": "${SAUCE_PASSWORD}"
     }
   ]
 }
