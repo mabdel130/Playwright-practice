@@ -1,6 +1,6 @@
 {
   "registeredUser": {
-    "email": "${CLIENT_USER_EMAIL}",
-    "password": "${CLIENT_USER_PASSWORD}"
+    "email": "autotest.tc01.1790632625083@gmail.com",
+    "password": "AutoTest@1790632625083"
   }
 }

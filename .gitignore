@@ -28,11 +28,3 @@ node_modules/
 # Claude Code local config
 /.claude/
 /CLAUDE.md
-
-# Secrets (keep .env.example as the committed template)
-.env
-.env.*
-!.env.example
-
-# All test reports (html, json, allure, test artifacts)
-/report/

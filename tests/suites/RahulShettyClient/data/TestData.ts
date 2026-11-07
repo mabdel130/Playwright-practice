@@ -41,12 +41,6 @@ export interface LoginCase {
 export interface CartData {
   validProduct: string;
   invalidProduct: string;
-  /** Products added before the remove tests; any number of names works. */
-  productsToAdd: string[];
-  /** Must be one of productsToAdd. */
-  productToRemove: string;
-  /** Must NOT be in productsToAdd. */
-  productNotInCart: string;
 }
 
 export interface E2EData {

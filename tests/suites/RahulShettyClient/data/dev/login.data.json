@@ -15,7 +15,7 @@
     "title": "invalid login with valid email but wrong password",
     "technique": "Equivalence Partitioning - Invalid Password",
     "userRef": "registeredUser",
-    "password": "${CLIENT_WRONG_PASSWORD}",
+    "password": "WrongPassword@123",
     "expected": {
       "type": "error",
       "status": 400,
@@ -26,8 +26,8 @@
     "id": "TC03",
     "title": "invalid login with unregistered email",
     "technique": "Equivalence Partitioning - Unregistered User",
-    "email": "${CLIENT_UNREGISTERED_EMAIL}",
-    "password": "${CLIENT_UNREGISTERED_PASSWORD}",
+    "email": "unregistered.user.12345@gmail.com",
+    "password": "AnyPassword@123",
     "expected": {
       "type": "error",
       "status": 400,

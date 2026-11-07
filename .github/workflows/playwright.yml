@@ -2,7 +2,7 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [main, 'Task*', 'HandlingMultiEnvironments']
+    branches: [main, 'Task*']
   pull_request:
     branches: [main]
   schedule:
@@ -19,11 +19,6 @@ on:
         default: 'chromium'
         type: choice
         options: [chromium, all]
-      tag:
-        description: 'Run only tests with this tag'
-        default: 'all'
-        type: choice
-        options: [all, '@valid', '@invalid', '@smoke', '@regression']
 
 permissions:
   contents: read
@@ -54,7 +49,6 @@ jobs:
     env:
       TEST_ENV: ${{ inputs.environment || 'test' }}
       BROWSERS: ${{ inputs.browsers || 'chromium' }}
-      TAG: ${{ inputs.tag || 'all' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,25 +64,13 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            report/allure-results/history
-            report/json/flaky-history.json
+            allure-results/history
+            test-results/flaky-history.json
           key: trend-${{ env.TEST_ENV }}-${{ github.run_id }}
           restore-keys: trend-${{ env.TEST_ENV }}-
 
       - name: Run tests
-        env:
-          CLIENT_USER_EMAIL: ${{ secrets.CLIENT_USER_EMAIL }}
-          CLIENT_USER_PASSWORD: ${{ secrets.CLIENT_USER_PASSWORD }}
-          CLIENT_WRONG_PASSWORD: ${{ secrets.CLIENT_WRONG_PASSWORD }}
-          CLIENT_UNREGISTERED_EMAIL: ${{ secrets.CLIENT_UNREGISTERED_EMAIL }}
-          CLIENT_UNREGISTERED_PASSWORD: ${{ secrets.CLIENT_UNREGISTERED_PASSWORD }}
-          CLIENT_E2E_EMAIL: ${{ secrets.CLIENT_E2E_EMAIL }}
-          CLIENT_E2E_PASSWORD: ${{ secrets.CLIENT_E2E_PASSWORD }}
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
-          FORM_EMAIL: ${{ secrets.FORM_EMAIL }}
-          FORM_PASSWORD: ${{ secrets.FORM_PASSWORD }}
-        run: npx playwright test tests/suites ${{ env.BROWSERS == 'chromium' && '--project=chromium' || '' }} ${{ env.TAG != 'all' && format('--grep {0}', env.TAG) || '' }}
+        run: npx playwright test tests/suites ${{ env.BROWSERS == 'chromium' && '--project=chromium' || '' }}
 
       - name: Metrics and Allure report
         if: ${{ !cancelled() }}
@@ -96,12 +78,7 @@ jobs:
         run: |
           node scripts/metrics.js >> "$GITHUB_STEP_SUMMARY"
           npm run allure:generate
-          mkdir -p report/allure-results/history && cp -r report/allure-report/history/. report/allure-results/history/
-
-      - name: Screenshots of the HTML report (@valid / @invalid)
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        run: npm run report:screenshots
+          mkdir -p allure-results/history && cp -r allure-report/history/. allure-results/history/
 
       - name: Save trend history
         if: ${{ !cancelled() }}
@@ -109,8 +86,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            report/allure-results/history
-            report/json/flaky-history.json
+            allure-results/history
+            test-results/flaky-history.json
           key: trend-${{ env.TEST_ENV }}-${{ github.run_id }}
 
       - name: Upload reports
@@ -118,17 +95,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reports-${{ env.TEST_ENV }}-${{ env.BROWSERS }}
-          path: report/
-          retention-days: 14
-
-      - name: Upload screenshots
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-${{ env.TEST_ENV }}-${{ env.BROWSERS }}
           path: |
-            report/report-screenshots/
-            tests/suites/*/screenshots/
+            playwright-report/
+            allure-report/
+            test-results/
           retention-days: 14
 
       - name: Comment on PR
@@ -139,7 +109,7 @@ jobs:
           script: |
             const fs = require('fs');
             const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf-8') : '');
-            const results = read('report/json/results.json');
+            const results = read('test-results/results.json');
             const s = results && JSON.parse(results).stats;
             const summary = s
               ? `✅ ${s.expected} passed · ❌ ${s.unexpected} failed · ⚠️ ${s.flaky} flaky · ⏭️ ${s.skipped} skipped`
@@ -148,5 +118,5 @@ jobs:
             await github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
-              body: `## 📊 Test Results (${process.env.TEST_ENV}, ${process.env.BROWSERS})\n\n${summary}\n\n${read('report/json/metrics.md')}\n\nReports are in the **reports** artifact and screenshots in the **screenshots** artifact of [this run](${runUrl}).`,
+              body: `## 📊 Test Results (${process.env.TEST_ENV}, ${process.env.BROWSERS})\n\n${summary}\n\n${read('test-results/metrics.md')}\n\nReports are in the **reports** artifact of [this run](${runUrl}).`,
             });
