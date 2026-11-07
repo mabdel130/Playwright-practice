@@ -13,7 +13,7 @@ test.describe(`RahulShettyClient - Order Flow [${ENV}]`, () => {
     await loginAsValidUser();
   });
 
-  test('TC11: add 2 products, checkout and verify product IDs match JSON data (positive)', async ({
+  test('TC11: add 2 products, checkout and verify product IDs match JSON data (positive)', { tag: ['@valid', '@regression', '@order'] }, async ({
     page, logger, addToCartPage, checkoutFlow, ordersPage,
   }) => {
     const { products, checkout } = orderData;

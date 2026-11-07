@@ -1,15 +1,18 @@
 # Playwright Test Automation Framework (TAF)
 
-End-to-end and API test automation built with **Playwright 1.63** and **TypeScript**.
+End-to-end and API test automation built with **Playwright 1.64** and **TypeScript**.
 
 - 🧱 **SOLID architecture** (ISTQB CTAL-TAE ch.3): layered core, page objects and API clients injected through fixtures
 - 🔐 **API login**: tests get a session token from the REST API instead of filling in the login form
+- 🔑 **No secrets in git**: emails and passwords live in a `.env` file inside each suite folder; data files only hold `${VARIABLE}` placeholders
 - 🧪 **Isolated sessions**: UI tests register a fresh user through the API, so every test starts with an empty cart and no old orders
 - ♻️ **Reusable flows**: login precondition (`loginAsValidUser`) and cart → checkout → order (`checkoutFlow`) are written once and shared by specs
 - 🗂️ **JSON data-driven, multi-environment**: `dev` / `test` / `staging` / `prod` data and URLs per suite
-- 📸 **Screenshot for every test**: attached to the HTML and Allure reports; the per-test log is also attached when a test fails
-- 🎯 **Allure, HTML, JUnit and JSON reports**
-- ⚡ **Simple CI**: runs on every PR, plus a bi-weekly health check; Chromium by default
+- 🏷️ **Tagged tests**: every RahulShettyClient test is `@valid` or `@invalid`, `@smoke` or `@regression`, plus a feature tag; run any group with one command
+- 📸 **Screenshot for every test** (passed and failed): attached to the HTML and Allure reports; the per-test log is also attached when a test fails
+- 🖼️ **Screenshots of the HTML report** filtered to `@valid` and `@invalid`, taken by a script locally and in CI
+- 🎯 **Allure, HTML and JSON reports**, all written to one `report/` folder
+- ⚡ **Simple CI**: runs on every PR, plus a bi-weekly health check; Chromium by default; pick a tag when running it by hand
 - ✅ **Verified framework** (ISTQB CTAL-TAE ch.7): typecheck, ESLint, anti-pattern scan, unit tests and a pre-flight setup check
 - 📈 **Continuous improvement** (ISTQB CTAL-TAE ch.8): metrics, flaky and Allure history, self-healing visibility
 
@@ -26,7 +29,7 @@ tests/
 │   ├── contracts.ts                   # Navigable interface (pages that have a URL)
 │   ├── api/BaseApi.ts                 # Abstract API client (request, baseUrl, logger, post)
 │   ├── config/EnvConfig.ts            # loadEnvConfig(suiteDir), createSuiteConfig(__dirname)
-│   ├── data/DataLoader.ts             # loadData(suiteDir, file) → data/<ENV>/<file> + {{timestamp}}
+│   ├── data/DataLoader.ts             # loadData(suiteDir, file) → data/<ENV>/<file>, fills ${VAR} from the suite .env + {{timestamp}}
 │   ├── env.ts                         # parseEnv() + ENV (TEST_ENV, default: test)
 │   ├── fileName.ts                    # sanitizeFileName() for screenshot names
 │   ├── fixtures.ts                    # Base test: logger, auto autoScreenshot, failure capture
@@ -35,7 +38,9 @@ tests/
 │   └── globalSetup.ts                 # Pre-flight, then wipes old results (keeps trend history)
 │
 ├── suites/
-│   ├── RahulShettyClient/             # Register → API login → cart → checkout → orders
+│   ├── RahulShettyClient/             # Register → API login → cart (add / remove) → checkout → orders
+│   │   ├── .env                       # Secrets for this suite (gitignored)
+│   │   ├── .env.example               # Template with the variable names (committed)
 │   │   ├── api/AuthApi.ts             # POST /auth/register, POST /auth/login, getToken()
 │   │   ├── config/
 │   │   │   ├── env.config.json        # baseUrl + apiBaseUrl per env
@@ -43,17 +48,18 @@ tests/
 │   │   ├── data/
 │   │   │   ├── TestData.ts            # Typed models + resolveCredentials()
 │   │   │   └── {dev,test,staging,prod}/
-│   │   │       ├── users.data.json    # Registered account for the login API tests
+│   │   │       ├── users.data.json    # Registered account for the login API tests (${...} placeholders)
 │   │   │       ├── login.data.json    # 4 API login cases (1 valid, 3 invalid)
-│   │   │       ├── cart.data.json     # Valid / invalid product
+│   │   │       ├── cart.data.json     # Valid / invalid product, products to add / remove
 │   │   │       ├── e2e.data.json      # New user, product, checkout data
 │   │   │       └── order.data.json    # Products (name + product ID) and checkout data
 │   │   ├── pages/                     # ClientBasePage, LoginPage, RegisterPage, AddToCartPage, CheckoutPage, OrdersPage
 │   │   ├── flows/CheckoutFlow.ts      # Reusable cart → checkout → place order steps
 │   │   ├── fixtures.ts                # Injects pages, AuthApi, checkoutFlow, loginAsValidUser
-│   │   └── Test/                      # login, addToCart, e2eValidFlow, orderFlow specs
+│   │   └── Test/                      # login, addToCart, removeFromCart, e2eValidFlow, orderFlow specs
 │   │
 │   ├── SauceDemo/                     # Login → inventory
+│   │   ├── .env / .env.example        # SAUCE_USERNAME, SAUCE_PASSWORD
 │   │   ├── config/ data/ pages/       # SauceDemoBasePage, LoginPage, InventoryPage
 │   │   ├── fixtures.ts
 │   │   └── Test/login.spec.ts
@@ -64,6 +70,7 @@ tests/
 │   │   └── Test/alertsHandling.spec.ts
 │   │
 │   └── SpecialLocators/               # Locator strategies (Angular practice form + shop)
+│       ├── .env / .env.example        # FORM_EMAIL, FORM_PASSWORD
 │       ├── config/env.config.json
 │       ├── data/{dev,test,staging,prod}/form.data.json
 │       ├── pages/                 # SpecialLocatorsBasePage, AngularPracticePage
@@ -77,9 +84,11 @@ tests/
 
 scripts/
 ├── check-antipatterns.js              # Fails on waitForTimeout, .only, expect(await …), page.$
-└── metrics.js                         # results.json → metrics.json / metrics.md / flaky-history.json
+├── metrics.js                         # report/json/results.json → metrics.json / metrics.md / flaky-history.json
+└── report-screenshots.js              # PNGs of the HTML report filtered to @valid / @invalid
 eslint.config.mjs                      # typescript-eslint + eslint-plugin-playwright
 .github/workflows/playwright.yml       # CI: verify job, then browser tests
+report/                                # All test output (gitignored): html, json, allure, test-results, report-screenshots
 ```
 
 **Layers (gTAA):** specs (test definition) → suite fixtures (wiring) → page objects / API clients (adaptation) → core (framework services).
@@ -96,8 +105,8 @@ How this repo maps to the generic Test Automation Architecture:
 | Test definition | `tests/suites/*/Test/*.spec.ts` and suite `fixtures.ts` - what to test, in `test.step` phases, with web-first assertions |
 | Test execution | Playwright runner configured in `playwright.config.ts`, `tests/core/globalSetup.ts` (pre-flight, cleanup) and the GitHub Actions workflow |
 | Test adaptation | Page objects (`pages/`) and API clients (`api/`) built on `BasePage` / `BaseApi`; `SelfHealingLocator` |
-| Reporting and logging | `Logger`, failure attachments, Playwright/Allure/JUnit/JSON reporters, `scripts/metrics.js` |
-| Configuration and environment | `TEST_ENV`, `config/env.config.json`, `tests/core/env.ts`, `tests/core/config/EnvConfig.ts` |
+| Reporting and logging | `Logger`, failure attachments, Playwright/Allure/JSON reporters, `scripts/metrics.js`, `scripts/report-screenshots.js` |
+| Configuration and environment | `TEST_ENV`, `config/env.config.json`, per-suite `.env`, `tests/core/env.ts`, `tests/core/config/EnvConfig.ts` |
 
 Every suite has the same shape: `config/`, `data/<env>/`, `pages/<Suite>BasePage.ts` (loads the base URL through `createSuiteConfig`), page objects, `fixtures.ts` built with `pageFixture`, and the specs. Pages never call each other and specs never build dependencies - both rules keep the layers separate.
 
@@ -148,6 +157,16 @@ npm install
 npx playwright install          # first time only
 ```
 
+Then create the secret files. Each suite that needs credentials has a `.env.example` in its folder; copy it to `.env` in the same folder and fill in the values:
+
+```bash
+cp tests/suites/RahulShettyClient/.env.example tests/suites/RahulShettyClient/.env
+cp tests/suites/SauceDemo/.env.example         tests/suites/SauceDemo/.env
+cp tests/suites/SpecialLocators/.env.example   tests/suites/SpecialLocators/.env
+```
+
+See [Secrets and credentials](#secrets-and-credentials-env) for how the values are used.
+
 ## Running Tests
 
 ```bash
@@ -160,6 +179,25 @@ npx playwright test --headed                      # see the browser while runnin
 npx playwright test --headed --project=chromium   # headed mode, single browser
 ```
 
+### Running by tag (Valid / Invalid, Smoke / Regression)
+
+Every RahulShettyClient test has three tags: a **scenario** (`@valid` / `@invalid`), a **level** (`@smoke` / `@regression`) and a **feature** (`@login`, `@cart`, `@order`, `@e2e`).
+
+```bash
+npm run test:valid          # positive scenarios
+npm run test:invalid        # negative scenarios
+npm run test:smoke          # quick check: TC01, TC05, TC07, E2E
+npm run test:regression     # everything that is not smoke
+npx playwright test --grep @cart --project=chromium     # any single tag
+npx playwright test --grep "@valid.*@cart"              # tags can be combined
+```
+
+Tags are set with Playwright's `tag` option, so they also show as labels in the HTML report and can be filtered there (type `@valid` in the search box):
+
+```typescript
+test('TC07: remove one product from the cart (positive)', { tag: ['@valid', '@smoke', '@cart'] }, async ({ addToCartPage }) => { … });
+```
+
 ### Debugging: API responses, localStorage and the Network tab
 
 ```bash
@@ -169,7 +207,7 @@ DEBUG_API=1 npx playwright test ...                                           # 
 
 - `DEBUG_API=1` prints each API response (status + body) and the page `localStorage` after every `gotoRoute`, and attaches both to the test report (`api-response POST /auth/login`, `localStorage /dashboard/dash`). It is off by default because the output contains the login token.
 - `DEVTOOLS=1` opens Chrome DevTools on every tab (Chromium only), so the Network tab records the browser traffic from the first request.
-- `DEBUG_API=1` also keeps a **trace for every test**. Open it with `npx playwright show-trace test-results/<test-folder>/trace.zip`: its **Network** tab lists every request (including the API login) with headers and response body, next to a screenshot of the page at each step. Playwright cannot screenshot Chrome DevTools itself, so this is the way to get a Network view you can capture.
+- `DEBUG_API=1` also keeps a **trace for every test**. Open it with `npx playwright show-trace report/test-results/<test-folder>/trace.zip`: its **Network** tab lists every request (including the API login) with headers and response body, next to a screenshot of the page at each step. Playwright cannot screenshot Chrome DevTools itself, so this is the way to get a Network view you can capture.
 - API login uses Playwright's `request` fixture, not the browser, so it does **not** appear in the Network tab. Read it from the console or the report attachment. The token only reaches the browser when it is injected into `localStorage` (`LoginPage.loginWithToken`).
 
 ### Headed Mode (Watch Tests Run)
@@ -197,30 +235,73 @@ TEST_ENV=staging npx playwright test tests/suites             # bash
 
 Test titles include the environment (`RahulShettyClient - Login API [dev]`). RahulShettyClient UI tests (E2E, cart, order flow) are **skipped on prod** where they create users and orders.
 
-**Adding an environment:** add an entry to each suite's `env.config.json`, create a `data/<env>/` folder with that suite's JSON files, and optionally add a `test:<env>` npm script. Also add the name to `validEnvs` in `tests/core/env.ts`.
+**Adding an environment:** add an entry to each suite's `env.config.json`, create a `data/<env>/` folder with that suite's JSON files, and optionally add a `test:<env>` npm script. Also add the name to `VALID_ENVS` in `tests/core/env.ts`.
+
+### Secrets and credentials (`.env`)
+
+No email or password is stored in the repo. Data files hold placeholders, and each suite reads the real values from a `.env` file **in its own folder**:
+
+```json
+// tests/suites/RahulShettyClient/data/test/users.data.json
+{ "registeredUser": { "email": "${CLIENT_USER_EMAIL}", "password": "${CLIENT_USER_PASSWORD}" } }
+```
+
+```bash
+# tests/suites/RahulShettyClient/.env   (gitignored)
+CLIENT_USER_EMAIL=someone@example.com
+CLIENT_USER_PASSWORD=…
+```
+
+- `loadData()` replaces every `${NAME}` with the value of `NAME`. If a value is missing, the test fails with a message naming the variable and the `.env` file to add it to.
+- **Priority** (highest first): a real environment variable (CI secrets) → `<suite>/.env.<TEST_ENV>` (e.g. `.env.staging`, optional) → `<suite>/.env`.
+- `{{timestamp}}` also works inside `.env` values, e.g. `CLIENT_E2E_EMAIL=e2e.user.{{timestamp}}@gmail.com`.
+- Every `.env` / `.env.*` file is gitignored; only `.env.example` (names, no values) is committed.
+
+| Suite | Variables |
+|---|---|
+| RahulShettyClient | `CLIENT_USER_EMAIL`, `CLIENT_USER_PASSWORD`, `CLIENT_WRONG_PASSWORD`, `CLIENT_UNREGISTERED_EMAIL`, `CLIENT_UNREGISTERED_PASSWORD`, `CLIENT_E2E_EMAIL`, `CLIENT_E2E_PASSWORD` |
+| SauceDemo | `SAUCE_USERNAME`, `SAUCE_PASSWORD` |
+| SpecialLocators | `FORM_EMAIL`, `FORM_PASSWORD` |
 
 ### Reports
 
-**Playwright HTML Report** (detailed test timeline, screenshots, videos, traces):
+All reporters write into one `report/` folder (gitignored, cleaned by `globalSetup` before each run):
+
+| Path | Content |
+|---|---|
+| `report/html/` | Playwright HTML report |
+| `report/json/results.json` | JSON report (read by `scripts/metrics.js` and the CI PR comment) |
+| `report/allure-results/` → `report/allure-report/` | Allure raw results → generated Allure report |
+| `report/test-results/` | Screenshots, traces and error context per test |
+| `report/report-screenshots/` | PNGs of the HTML report (see below) |
+
+**Playwright HTML Report** (detailed test timeline, screenshots, traces):
 ```bash
-npm run test:report                  # generate + open Playwright HTML
-npx playwright show-report           # open existing report
+npm run test:report                  # open report/html
 ```
 
-**Allure Report** (executive summary, trends, attachments):
+**Allure Report** (executive summary, trends, attachments) — needs **Java** (JDK 17+, with `JAVA_HOME` set) locally; GitHub's Ubuntu runners already have it:
 ```bash
-npm run allure:generate              # build allure-report/index.html (single file) from allure-results
+npm run allure:generate              # build report/allure-report/index.html (single file) from report/allure-results
 npm run allure:open                  # open Allure in browser
 npm run test:report:allure           # generate + open Allure
 npm run report:all                   # generate Allure, then open the Playwright HTML report
 ```
 
-- The Allure HTML **does not update by itself**: run `npm run allure:generate` after every test run. It is built as a single file, so `allure-report/index.html` also opens directly from disk.
+- The Allure HTML **does not update by itself**: run `npm run allure:generate` after every test run. It is built as a single file, so `report/allure-report/index.html` also opens directly from disk.
 - Don't pass `--reporter=...` on the command line: it replaces all reporters in the config, so neither the HTML nor the Allure report is written.
+
+**Screenshots of the HTML report** (Valid / Invalid):
+```bash
+npm run report:screenshots
+```
+`scripts/report-screenshots.js` serves `report/html`, filters it to `@valid` and then `@invalid`, and saves to `report/report-screenshots/`:
+- `valid-list.png` / `invalid-list.png`: the filtered test list with tags and pass/fail status
+- `valid-first-test.png` / `invalid-first-test.png`: the first test's page, showing its steps and attached screenshot
 
 **Trace Inspection** (detailed step-by-step execution):
 ```bash
-npx playwright show-trace test-results/<test-folder>/trace.zip
+npx playwright show-trace report/test-results/<test-folder>/trace.zip
 ```
 
 **Run in Headed Mode + Generate Reports:**
@@ -239,10 +320,10 @@ After running tests, view results in different formats:
 
 | Report | Purpose | Open |
 |--------|---------|------|
-| **Playwright HTML** | Timeline, screenshots, videos, traces | `npx playwright show-report` |
+| **Playwright HTML** | Timeline, screenshots, traces, tag filter | `npm run test:report` |
 | **Allure** | Executive summary, test matrix, trends | `npm run allure:open` |
-| **JUnit** | CI/CD integration (Jenkins, GitLab, etc.) | `test-results/junit.xml` |
-| **JSON** | Programmatic parsing | `test-results/results.json` |
+| **JSON** | Programmatic parsing, metrics | `report/json/results.json` |
+| **Report screenshots** | Valid / Invalid views of the HTML report as PNGs | `report/report-screenshots/` |
 | **Traces** | Step-by-step execution details | `npx playwright show-trace <trace.zip>` |
 
 **Example workflow:**
@@ -251,13 +332,16 @@ After running tests, view results in different formats:
 npm run test:test -- tests/suites/RahulShettyClient tests/suites/SauceDemo --headed
 
 # 2. View Playwright report (timeline + screenshots)
-npx playwright show-report
+npm run test:report
 
-# 3. View Allure report (executive summary)
-npm run allure:open
+# 3. Save screenshots of the @valid / @invalid views of the report
+npm run report:screenshots
 
-# 4. Inspect specific test trace
-npx playwright show-trace test-results/suites-RahulShettyClient-Test-e2e-test-chromium/trace.zip
+# 4. View Allure report (executive summary)
+npm run allure:generate && npm run allure:open
+
+# 5. Inspect specific test trace
+npx playwright show-trace report/test-results/<test-folder>/trace.zip
 ```
 
 ---
@@ -268,16 +352,22 @@ npx playwright show-trace test-results/suites-RahulShettyClient-Test-e2e-test-ch
 
 **URL:** https://rahulshettyacademy.com/client/ · **API:** `https://rahulshettyacademy.com/api/ecom`
 
-| ID | Test | Technique | Layer | Data |
-|----|------|-----------|-------|------|
-| TC01 | Valid login returns token + userId | Positive | API | login + users |
-| TC02 | Valid email, wrong password → 400 | Equivalence partitioning | API | login + users |
-| TC03 | Unregistered email → 400 | Equivalence partitioning | API | login |
-| TC04 | Empty email and password → 400 `Email is required` | Boundary | API | login |
-| TC05 | Add valid product, cart count +1, product in cart | Positive | UI (isolated user) | cart |
-| TC06 | Search invalid product → "Showing 0 results", not in cart | Negative | UI (isolated user) | cart |
-| TC11 | Product IDs (via "View") match JSON → add 2 products → checkout → API response product IDs match JSON → Orders tab lists exactly these orders → "View" each order | End-to-end | UI + API (isolated user) | order |
-| E2E | Register → API login → add to cart → checkout → order confirmed | End-to-end | UI (API login) | e2e |
+| ID | Test | Technique | Layer | Data | Tags |
+|----|------|-----------|-------|------|------|
+| TC01 | Valid login returns token + userId | Positive | API | login + users | `@valid @smoke @login` |
+| TC02 | Valid email, wrong password → 400 | Equivalence partitioning | API | login + users | `@invalid @regression @login` |
+| TC03 | Unregistered email → 400 | Equivalence partitioning | API | login | `@invalid @regression @login` |
+| TC04 | Empty email and password → 400 `Email is required` | Boundary | API | login | `@invalid @regression @login` |
+| TC05 | Add valid product, cart count +1, product in cart | Positive | UI (isolated user) | cart | `@valid @smoke @cart` |
+| TC06 | Search invalid product → "Showing 0 results", not in cart | Negative | UI (isolated user) | cart | `@invalid @regression @cart` |
+| TC07 | Add products → remove one by name → count −1, others still in cart | Positive | UI (isolated user) | cart | `@valid @smoke @cart` |
+| TC08 | Add products → remove all one by one → "No Products in Your Cart" | Positive | UI (isolated user) | cart | `@valid @regression @cart` |
+| TC09 | Product not in cart has no row and no delete button; cart unchanged | Negative | UI (isolated user) | cart | `@invalid @regression @cart` |
+| TC10 | New user's empty cart: empty message, nothing to delete | Negative | UI (isolated user) | cart | `@invalid @regression @cart` |
+| TC11 | Product IDs (via "View") match JSON → add 2 products → checkout → API response product IDs match JSON → Orders tab lists exactly these orders → "View" each order | End-to-end | UI + API (isolated user) | order | `@valid @regression @order` |
+| E2E | Register → API login → add to cart → checkout → order confirmed | End-to-end | UI (API login) | e2e | `@valid @smoke @e2e` |
+
+The login tests take their scenario tag from the data: `expected.type: "success"` → `@valid`, `"error"` → `@invalid`, so a new JSON row is tagged automatically.
 
 The login API tests render their request and response in the browser, so their screenshot shows the evidence (the token is masked).
 
@@ -287,7 +377,7 @@ Written once in `fixtures.ts` and called from `beforeEach` in any spec that need
 
 1. Builds a unique user and registers it with `AuthApi.register()` (`POST /auth/register`).
 2. `AuthApi.getToken()` calls `POST /auth/login` and returns the JWT (or fails with the HTTP status and body).
-3. `LoginPage.loginWithToken(token)` writes `localStorage.token` through `page.addInitScript`, so the token is in place before the app boots. If the app is already open, it reloads, because the app reads the token only at startup.
+3. `LoginPage.loginWithToken(token)` writes `localStorage.token` through `page.addInitScript`, so the token is in place before the app boots. If the app is already open, it leaves to `about:blank`: the app uses hash routes (`#/auth/…` → `#/dashboard/…`), and moving between them is not a real page load, so the app would not re-read the token. The next `goto()` is then a full load with the token set.
 4. Opens the dashboard and checks the URL. The login form is never used.
 
 Because every test gets its own user, tests can run in parallel without sharing a cart or seeing each other's orders.
@@ -305,6 +395,20 @@ test.beforeEach(async ({ loginAsValidUser }) => {
 ```typescript
 const { orderIds, productIds } = await checkoutFlow.purchase(productNames, checkout, shippingName);
 ```
+
+**Dynamic remove from cart**
+
+`AddToCartPage` finds cart rows by product name, never by position, so the same methods work for any product and any number of items:
+
+| Method | What it does |
+|---|---|
+| `addProductsToCart(names)` | Adds each product and checks the cart count goes up by one each time |
+| `getCartProductNames()` | Reads the product names currently in the cart from the page |
+| `removeProductFromCart(name)` | Clicks that product's delete button, then checks its row is gone and the count dropped by one |
+| `removeAllProductsFromCart()` | Removes the first product until the cart is empty; returns the removed names |
+| `expectCartEmpty()` | "No Products in Your Cart" shown, no rows, blank cart badge |
+
+The products come from `cart.data.json` (`productsToAdd`, `productToRemove`, `productNotInCart`), so changing what TC07–TC10 use is a data edit only.
 
 ### 2. SauceDemo — Login
 
@@ -329,14 +433,14 @@ const users      = loadData<UsersData>(SUITE_DIR, 'users.data.json');
 const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
 ```
 
-**One source for credentials.** `users.data.json` holds the registered account used by the login API tests. Login cases point to it with `userRef`, and can override single fields:
+**One source for credentials.** `users.data.json` holds the registered account used by the login API tests. Login cases point to it with `userRef`, and can override single fields. The values themselves come from the suite's `.env` (see [Secrets and credentials](#secrets-and-credentials-env)):
 
 ```json
 // users.data.json
-{ "registeredUser": { "email": "autotest.tc01…@gmail.com", "password": "AutoTest@…" } }
+{ "registeredUser": { "email": "${CLIENT_USER_EMAIL}", "password": "${CLIENT_USER_PASSWORD}" } }
 
 // login.data.json (TC02 reuses the email, overrides the password)
-{ "id": "TC02", "userRef": "registeredUser", "password": "WrongPassword@123",
+{ "id": "TC02", "userRef": "registeredUser", "password": "${CLIENT_WRONG_PASSWORD}",
   "expected": { "type": "error", "status": 400, "message": "Incorrect email or password." } }
 
 // order.data.json (product IDs are checked against the app)
@@ -345,9 +449,9 @@ const loginCases = loadData<LoginCase[]>(SUITE_DIR, 'login.data.json');
   "checkout": { "cardNumber": "…", "country": "India" } }
 ```
 
-`resolveCredentials(users, source)` merges the referenced user with any overrides. A password change is now a one-line edit in each environment's `users.data.json`.
+`resolveCredentials(users, source)` merges the referenced user with any overrides. A password change is a one-line edit in the suite's `.env` (or `.env.<env>` for one environment).
 
-**Unique data per run.** `{{timestamp}}` in any data file is replaced by `Date.now()` when it's loaded (used for the E2E registration email).
+**Unique data per run.** `{{timestamp}}` in any data file or `.env` value is replaced by `Date.now()` when it's loaded (used for the E2E registration email).
 
 **Adding a test case:** add a JSON row. The spec loops over the cases, so no code change is needed.
 
@@ -400,19 +504,21 @@ See **Selector Priority** and **Flaky Test Debugging** in `.claude/skills/playwr
 
 | Setting | Value |
 |---|---|
+| `testDir` | `./tests` |
+| `globalSetup` | `tests/core/globalSetup.ts` (pre-flight, cleans `report/`) |
 | `timeout` | 60 s per test |
 | `expect.timeout` | 10 s (web-first assertions) |
-| `navigationTimeout` / `actionTimeout` | 60 s |
-| `trace` | `retain-on-failure`; `on` when `DEBUG_API=1` |
-| `screenshot` | `on`, full page (every test) |
-| `launchOptions.slowMo` | `SLOWMO` env var, default `0` (all projects, Chromium included) |
-| `fullyParallel` | `false` |
+| `trace` | `on-first-retry`; `on` when `DEBUG_API=1` |
+| `screenshot` | `on`, full page (every test, passed or failed) |
+| `launchOptions.slowMo` | `SLOWMO` env var, default `0`; Chromium also opens DevTools when `DEVTOOLS=1` |
+| `fullyParallel` | `true` |
 | `retries` | 2 on CI, 0 locally |
 | `workers` | 1 on CI, default locally |
-| Reporters | list, html, json (`test-results/results.json`), junit (`test-results/junit.xml`), allure-playwright |
-| Projects | `unit` (no browser, `tests/unit`), chromium, firefox, webkit, Mobile Chrome, Mobile Safari |
+| `outputDir` | `report/test-results` |
+| Reporters | list, html (`report/html`), json (`report/json/results.json`), allure-playwright (`report/allure-results`) |
+| Projects | `unit` (no browser, `tests/unit`), chromium, firefox, webkit |
 
-Every browser project ignores `tests/unit/`, so unit tests run once, in the `unit` project only.
+Every browser project ignores `tests/unit/` and `tests/Typescript_Fundamentals/`, so unit tests run once, in the `unit` project only. The config is exported both as `testConfig` and as the default export.
 
 ---
 
@@ -426,24 +532,31 @@ verify (npm run verify) ──passes──► test (browser tests in tests/suite
 
 **When it runs**
 
-| Trigger | Environment | Browsers |
-|---|---|---|
-| Pull request to `main` | `test` | Chromium |
-| Push to `main` / `Task*` | `test` | Chromium |
-| Health check: days 1 and 15 of each month, 05:00 UTC | `test` | Chromium |
-| Run workflow (manual) | choose `dev` / `test` / `staging` / `prod` | choose `chromium` or `all` |
+| Trigger | Environment | Browsers | Tag |
+|---|---|---|---|
+| Pull request to `main` | `test` | Chromium | all |
+| Push to `main` / `Task*` / `HandlingMultiEnvironments` | `test` | Chromium | all |
+| Health check: days 1 and 15 of each month, 05:00 UTC | `test` | Chromium | all |
+| Run workflow (manual) | choose `dev` / `test` / `staging` / `prod` | choose `chromium` or `all` | choose `all` / `@valid` / `@invalid` / `@smoke` / `@regression` |
+
+**Secrets**
+
+The test step reads the credentials from GitHub repository secrets, which take priority over any `.env` file. Add each variable from the [Secrets table](#secrets-and-credentials-env) under **Settings → Secrets and variables → Actions** with the same name (13 in total). A missing secret fails the tests that use it, with a message naming the variable.
 
 **How it stays simple**
 
 - `verify` is one step, `npm run verify`. If the framework is broken, browser tests don't run.
 - Only the selected browsers are installed, with one `npx playwright install --with-deps` step (no browser cache, as Playwright recommends).
 - A newer push to the same branch **cancels** the older run (`concurrency`).
-- One artifact upload. No blocking `show-report` step.
+- Two artifact uploads. No blocking `show-report` step.
 
 **Outputs**
 
 - The job **fails when a test fails**.
-- Artifact `reports-<env>-<browsers>` contains `playwright-report/`, `allure-report/` and `test-results/` (JUnit, JSON, traces). It's kept for 14 days.
+- Every test, passed or failed, has its screenshot in the HTML and Allure reports (`screenshot: 'on'`).
+- Artifact `reports-<env>-<browsers>`: the whole `report/` folder (HTML, Allure, JSON, test-results with screenshots and traces).
+- Artifact `screenshots-<env>-<browsers>`: the report screenshots (`report/report-screenshots/`, `@valid` / `@invalid` views) and the per-test screenshots from `tests/suites/*/screenshots/`.
+- Both artifacts are kept for 14 days.
 - On PRs, a comment with passed / failed / flaky / skipped counts, the metrics table and a link to the run. The same metrics go to the job summary.
 
 ## Verifying the TAS (ISTQB CTAL-TAE ch.7)
@@ -461,9 +574,9 @@ The framework verifies itself before it verifies the product. `npm run verify` r
 
 ## Continuous improvement (ISTQB CTAL-TAE ch.8)
 
-- **Metrics**: `npm run metrics` (after a run) reads `test-results/results.json` and writes `metrics.json` / `metrics.md`: pass rate, flaky count, duration, slowest tests, healed locators.
+- **Metrics**: `npm run metrics` (after a run) reads `report/json/results.json` and writes `report/json/metrics.json` / `metrics.md`: pass rate, flaky count, duration, slowest tests, healed locators.
 - **Self-healing visibility**: when a backup locator is used, the test gets a `healed` annotation (primary + backup), so healing is counted even in passing tests. Fix the primary locator when you see one.
-- **Trends**: `globalSetup` keeps `allure-results/history` and `test-results/flaky-history.json`; CI restores and saves them between runs.
+- **Trends**: `globalSetup` keeps `report/allure-results/history` and `report/json/flaky-history.json`; CI restores and saves them between runs.
 - **Flaky policy**: a test that appears twice in `flaky-history.json` is fixed or quarantined (`test.fixme` with a ticket) within the sprint. Never add retries to hide it.
 - **Maintenance cadence**: the bi-weekly health check (days 1 and 15) shows drift and flakiness even when no code changes. Shared setup lives in `tests/core` (`createSuiteConfig`, `pageFixture`, `loadData`) - extend those instead of copying code between suites.
 
@@ -481,8 +594,9 @@ The framework verifies itself before it verifies the product. `npm run verify` r
    ```
 3. API clients extend `BaseApi`.
 4. Add `fixtures.ts` that extends `tests/core/fixtures` and injects your pages with `pageFixture(MyPage)` (APIs: `async ({ request, logger }, use) => use(new MyApi(request, logger))`).
-5. Specs import from `../fixtures`, load data with `loadData`, and assert with web-first `expect`. Do not request `autoScreenshot`; it is automatic.
-6. Put the same data files in all four `data/<env>/` folders; pre-flight fails the run if one is missing. Finish with `npm run verify`.
+5. Specs import from `../fixtures`, load data with `loadData`, and assert with web-first `expect`. Give each test a scenario, level and feature tag (`{ tag: ['@valid', '@smoke', '@myfeature'] }`). Do not request `autoScreenshot`; it is automatic.
+6. Put the same data files in all four `data/<env>/` folders; pre-flight fails the run if one is missing.
+7. Credentials go in `tests/suites/MySuite/.env` with a matching `.env.example`, referenced as `${MY_VAR}` in the data files. Add the same names as GitHub secrets and to the `Run tests` step's `env:` in the workflow. Finish with `npm run verify`.
 
 ---
 
@@ -490,8 +604,11 @@ The framework verifies itself before it verifies the product. `npm run verify` r
 
 - **Timeouts**: open the trace (`npx playwright show-trace …`). Prefer fixing the wait condition over raising timeouts.
 - **WebKit crashes/out-of-memory locally**: run with fewer workers (`--workers=2`).
-- **API login fails**: the error shows the HTTP status and body. Check `users.data.json` for the environment.
+- **API login fails**: the error shows the HTTP status and body. Check `CLIENT_USER_EMAIL` / `CLIENT_USER_PASSWORD` in `tests/suites/RahulShettyClient/.env` (or the GitHub secrets).
+- **`Missing "X" used in …`**: the variable is not in that suite's `.env` (locally) or not added as a secret (CI). Copy `.env.example` to `.env` and fill it in.
 - **Allure report missing or old**: `npm run allure:generate`, then `npm run allure:open`.
+- **`allure:generate` fails with `'""' is not recognized`** (Windows): Java is not installed or `JAVA_HOME` is not set. Install JDK 17+ and set `JAVA_HOME`.
+- **`report:screenshots` says `index.html not found`**: run the tests first; the script only reads an existing `report/html`.
 - **Reports not updated after a run**: check the command for `-- headed` (should be `--headed`) or a `--reporter` override.
 - **TC11 product ID mismatch**: the site re-created its products. Update the IDs in `order.data.json` (all envs).
 - **Pre-flight failed at start**: the message names the suite and the missing env entry or data file. Fix it, or check `TEST_ENV`.

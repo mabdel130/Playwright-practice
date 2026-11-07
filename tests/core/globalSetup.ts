@@ -4,13 +4,15 @@ import { ENV } from './env';
 import { checkAllSuites, checkBaseUrls, PreflightIssue } from './preflight';
 
 const DIRS_TO_WIPE = [
-  'allure-results',
-  'test-results',
-  'playwright-report',
+  'report/allure-results',
+  'report/test-results',
+  'report/html',
+  'report/json',
+  'report/report-screenshots',
 ];
 
 // Trend data survives the wipe: Allure's history/ and the flaky-test log written by scripts/metrics.js.
-const KEEP = { 'allure-results': ['history'], 'test-results': ['flaky-history.json'] } as Record<string, string[]>;
+const KEEP = { 'report/allure-results': ['history'], 'report/json': ['flaky-history.json'] } as Record<string, string[]>;
 
 function wipe(abs: string, keep: string[] = []): void {
   if (keep.length === 0 || !fs.existsSync(abs)) {
