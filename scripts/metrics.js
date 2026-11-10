@@ -1,9 +1,9 @@
-// Test automation metrics (ISTQB TAE ch.8). Reads test-results/results.json (Playwright JSON reporter),
-// writes test-results/metrics.json + test-results/metrics.md and appends flaky tests to flaky-history.json.
+// Test automation metrics (ISTQB TAE ch.8). Reads report/json/results.json (Playwright JSON reporter),
+// writes report/json/metrics.json + report/json/metrics.md and appends flaky tests to flaky-history.json.
 const fs = require('fs');
 const path = require('path');
 
-const RESULTS_DIR = path.resolve(__dirname, '..', 'test-results');
+const RESULTS_DIR = path.resolve(__dirname, '..', 'report', 'json');
 const resultsFile = path.join(RESULTS_DIR, 'results.json');
 if (!fs.existsSync(resultsFile)) {
   console.error(`metrics: ${resultsFile} not found - run the tests first`);
